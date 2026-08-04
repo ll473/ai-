@@ -21,4 +21,4 @@ COPY uploads/demo-products/ ./uploads/demo-products/
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 
 EXPOSE 8000
-CMD ["sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "python -m backend.scripts.init_db && python -m backend.scripts.seed_demo && exec uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

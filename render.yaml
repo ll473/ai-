@@ -5,7 +5,6 @@ services:
     plan: free
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
-    preDeployCommand: python -m backend.scripts.init_db && python -m backend.scripts.seed_demo
     envVars:
       - key: APP_ENV
         value: production
