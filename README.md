@@ -2,6 +2,28 @@
 
 Python + Vue 的前后端分离商城，在完整交易闭环之上提供 RAG、Function Calling 和可追踪的自主导购 Agent。
 
+<p align="center">
+  <a href="https://ll473.github.io/ai-/"><strong>在线体验商城展示版 →</strong></a>
+</p>
+
+## 项目展示
+
+### 商城首页
+
+![AI 智能商城首页](docs/screenshots/storefront-home.png)
+
+### AI 智能导购
+
+![AI 智能导购与商品推荐](docs/screenshots/ai-shopping-guide.png)
+
+### 商品详情
+
+![商品详情与 AI 问答](docs/screenshots/product-detail.png)
+
+### 运营管理后台
+
+![商城商品管理后台](docs/screenshots/admin-product-management.png)
+
 ## 当前进度
 
 当前已经完成后端基础、商品域与用户交易闭环第一版：
