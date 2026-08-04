@@ -1,0 +1,49 @@
+:root {
+  color-scheme: light dark;
+  --color-brand-50: #edf4ff;
+  --color-brand-100: #d9e8ff;
+  --color-brand-600: #1764d7;
+  --color-brand-700: #0f4fae;
+  --color-ink-950: #172033;
+  --color-ink-700: #354158;
+  --color-ink-500: #667085;
+  --color-ink-400: #98a2b3;
+  --color-line: #e3e8ef;
+  --color-line-strong: #cfd7e3;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f6f8fb;
+  --color-ground: #f3f6fa;
+  --color-success: #13795b;
+  --color-warning: #a35d00;
+  --color-danger: #d13b32;
+  --font-sans: 'Segoe UI Variable', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --radius-control: 10px;
+  --radius-container: 14px;
+  --content-width: 1380px;
+  --nav-height: 72px;
+  --shadow-float: 0 18px 50px rgb(38 55 82 / 12%);
+  --shadow-card: 0 12px 32px rgb(38 55 82 / 8%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-brand-50: #172b4d;
+    --color-brand-100: #1e3a66;
+    --color-brand-600: #6ea8fe;
+    --color-brand-700: #9bc2ff;
+    --color-ink-950: #eef4ff;
+    --color-ink-700: #cbd5e1;
+    --color-ink-500: #94a3b8;
+    --color-ink-400: #64748b;
+    --color-line: #2c3748;
+    --color-line-strong: #435068;
+    --color-surface: #151c29;
+    --color-surface-soft: #192230;
+    --color-ground: #0f1520;
+    --color-success: #51c99b;
+    --color-warning: #f0b35c;
+    --color-danger: #ff756c;
+    --shadow-float: 0 18px 50px rgb(0 0 0 / 28%);
+    --shadow-card: 0 12px 32px rgb(0 0 0 / 22%);
+  }
+}

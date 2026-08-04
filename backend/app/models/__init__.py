@@ -1,0 +1,62 @@
+from backend.app.models.ai import (
+    AgentRun,
+    AgentStep,
+    AiModelConfig,
+    Conversation,
+    ConversationMessage,
+    FunctionTool,
+    KnowledgeChunk,
+    KnowledgeDocument,
+    OperationReport,
+    PromptTemplate,
+    Recommendation,
+    RecommendationItem,
+    ReviewAnalysis,
+    ToolCallLog,
+)
+from backend.app.models.base import Base
+from backend.app.models.catalog import Brand, Category, Favorite, Product, ProductImage, ProductSku
+from backend.app.models.trade import (
+    AfterSaleRule,
+    CartItem,
+    Order,
+    OrderItem,
+    PaymentTransaction,
+    Review,
+)
+from backend.app.models.user import User, UserAddress, Wallet, WalletTransaction
+
+__all__ = [
+    "AfterSaleRule",
+    "AgentRun",
+    "AgentStep",
+    "AiModelConfig",
+    "Base",
+    "Brand",
+    "CartItem",
+    "Category",
+    "Conversation",
+    "ConversationMessage",
+    "Favorite",
+    "FunctionTool",
+    "KnowledgeChunk",
+    "KnowledgeDocument",
+    "OperationReport",
+    "Order",
+    "OrderItem",
+    "PaymentTransaction",
+    "Product",
+    "ProductImage",
+    "ProductSku",
+    "PromptTemplate",
+    "Recommendation",
+    "RecommendationItem",
+    "Review",
+    "ReviewAnalysis",
+    "ToolCallLog",
+    "User",
+    "UserAddress",
+    "Wallet",
+    "WalletTransaction",
+]
+
