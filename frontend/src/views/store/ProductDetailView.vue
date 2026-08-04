@@ -14,6 +14,7 @@ import {
   removeFavorite,
 } from '../../api/trade'
 import StatePanel from '../../components/StatePanel.vue'
+import { demoMode } from '../../demo/config'
 import { useAuthStore } from '../../stores/auth'
 import type { ProductQuestionResult } from '../../types/ai'
 import type { ProductDetail, ProductSku } from '../../types/catalog'
@@ -263,10 +264,10 @@ onMounted(loadProduct)
               size="large"
               :icon="ShoppingCart"
               :loading="adding"
-              :disabled="!selectedSku || availableStock <= 0"
+              :disabled="demoMode || !selectedSku || availableStock <= 0"
               @click="addToCart"
             >
-              加入购物车
+              {{ demoMode ? '展示版不可下单' : '加入购物车' }}
             </el-button>
             <el-button
               class="favorite-button"
@@ -274,6 +275,7 @@ onMounted(loadProduct)
               size="large"
               :icon="Star"
               :loading="changingFavorite"
+              :disabled="demoMode"
               @click="toggleFavorite"
             >
               {{ favorite ? '已收藏' : '收藏' }}
@@ -309,7 +311,7 @@ onMounted(loadProduct)
         </div>
       </section>
 
-      <section class="detail-section qa-section">
+      <section v-if="!demoMode" class="detail-section qa-section">
         <div class="qa-heading">
           <el-icon><MagicStick /></el-icon>
           <div>

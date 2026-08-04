@@ -4,6 +4,7 @@ import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { useAuthStore } from '../stores/auth'
+import { demoMode } from '../demo/config'
 
 const route = useRoute()
 const router = useRouter()
@@ -11,7 +12,7 @@ const auth = useAuthStore()
 const mobileMenuOpen = ref(false)
 const keyword = ref(typeof route.query.keyword === 'string' ? route.query.keyword : '')
 
-const navItems = [
+const fullNavItems = [
   { label: '商城首页', path: '/' },
   { label: 'AI 智能导购', path: '/ai-guide' },
   { label: '全部商品', path: '/products' },
@@ -21,6 +22,7 @@ const navItems = [
   { label: '个人中心', path: '/profile' },
   { label: '我的钱包', path: '/wallet' },
 ]
+const navItems = demoMode ? fullNavItems.filter((item) => ['/', '/products'].includes(item.path)) : fullNavItems
 
 watch(
   () => route.query.keyword,
@@ -51,6 +53,7 @@ function logout() {
         <RouterLink to="/" class="brand focus-ring" aria-label="AI 智能商城首页">
           <span class="brand__mark">A</span>
           <span>AI 智能商城</span>
+          <span v-if="demoMode" class="demo-badge">展示版</span>
         </RouterLink>
 
         <nav class="desktop-nav" aria-label="主导航">
@@ -83,7 +86,7 @@ function logout() {
               </template>
             </el-dropdown>
           </template>
-          <el-button v-else class="login-button" @click="router.push('/login')">登录</el-button>
+          <el-button v-else-if="!demoMode" class="login-button" @click="router.push('/login')">登录</el-button>
 
           <button
             class="mobile-menu-button focus-ring"
@@ -98,6 +101,10 @@ function logout() {
     </header>
 
     <main>
+      <div v-if="demoMode" class="demo-notice">
+        <span>公开展示版</span>
+        <p>可浏览商城首页、搜索筛选与商品详情；注册、购物车和订单功能需要连接后端服务。</p>
+      </div>
       <RouterView />
     </main>
 
@@ -183,6 +190,42 @@ function logout() {
   font-size: 18px;
   font-weight: 760;
   box-shadow: 0 7px 18px rgb(23 100 215 / 20%);
+}
+
+.demo-badge {
+  padding: 3px 7px;
+  border: 1px solid rgb(43 111 217 / 22%);
+  border-radius: 999px;
+  background: var(--color-brand-50);
+  color: var(--color-brand-700);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.demo-notice {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 20px;
+  border-bottom: 1px solid #f1dcc3;
+  background: #fff9ef;
+  color: var(--color-ink-600);
+  font-size: 13px;
+}
+
+.demo-notice span {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #ef7c4d;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.demo-notice p {
+  margin: 0;
 }
 
 .desktop-nav {

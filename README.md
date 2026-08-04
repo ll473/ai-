@@ -46,6 +46,14 @@ Copy-Item .env.example .env
 
 ## 公开部署
 
+### GitHub Pages 展示版
+
+[在线查看商城](https://ll473.github.io/ai-/)
+
+展示版无需服务器和银行卡，可浏览商城首页、搜索筛选及商品详情。注册、购物车、订单和 AI 导购需要后端服务，因此不会在展示版中开放。
+
+### 完整功能部署
+
 项目已经提供 `Dockerfile` 与 `render.yaml`。将仓库公开到 GitHub 后，可通过下面的按钮创建完整的商城网页、FastAPI 后端和 PostgreSQL 数据库：
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ll473/ai-)

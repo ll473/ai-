@@ -1,4 +1,6 @@
 import { http } from './http'
+import { demoBrands, demoCategories, getDemoProduct, getDemoProducts } from '../demo/catalog'
+import { demoMode } from '../demo/config'
 import type { ApiResponse, PageData } from '../types/api'
 import type {
   Brand,
@@ -9,24 +11,32 @@ import type {
 } from '../types/catalog'
 
 export async function getCategories(admin = false) {
+  if (demoMode && !admin) return demoCategories
   const path = admin ? '/admin/catalog/categories' : '/catalog/categories'
   const response = await http.get<ApiResponse<Category[]>>(path)
   return response.data.data
 }
 
 export async function getBrands(admin = false) {
+  if (demoMode && !admin) return demoBrands
   const path = admin ? '/admin/catalog/brands' : '/catalog/brands'
   const response = await http.get<ApiResponse<Brand[]>>(path)
   return response.data.data
 }
 
 export async function getProducts(query: ProductQuery = {}, admin = false) {
+  if (demoMode && !admin) return getDemoProducts(query)
   const path = admin ? '/admin/catalog/products' : '/catalog/products'
   const response = await http.get<ApiResponse<PageData<ProductSummary>>>(path, { params: query })
   return response.data.data
 }
 
 export async function getProduct(productId: number, admin = false) {
+  if (demoMode && !admin) {
+    const product = getDemoProduct(productId)
+    if (!product) throw new Error('没有找到这个展示商品')
+    return product
+  }
   const path = admin
     ? `/admin/catalog/products/${productId}`
     : `/catalog/products/${productId}`

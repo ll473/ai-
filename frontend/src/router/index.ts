@@ -1,11 +1,12 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router'
 
 import HomeView from '../views/store/HomeView.vue'
+import { demoMode } from '../demo/config'
 
 const adminMeta = { requiresAuth: true, requiresAdmin: true }
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: demoMode ? createWebHashHistory(import.meta.env.BASE_URL) : createWebHistory(),
   routes: [
     {
       path: '/',
@@ -67,6 +68,9 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
+  if (demoMode && (to.name === 'login' || to.meta.requiresAuth || to.meta.requiresAdmin)) {
+    return { name: 'home' }
+  }
   if (!to.meta.requiresAuth) return true
   const token = localStorage.getItem('access_token')
   const user = JSON.parse(localStorage.getItem('current_user') || 'null')
