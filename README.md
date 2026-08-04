@@ -8,21 +8,33 @@ Python + Vue 的前后端分离商城，在完整交易闭环之上提供 RAG、
 
 ## 项目展示
 
-### 商城首页
+### 商城前台
 
-![AI 智能商城首页](docs/screenshots/storefront-home.png)
+| 商城首页 | AI 智能导购 |
+| --- | --- |
+| ![AI 智能商城首页](docs/screenshots/01-storefront-home.png) | ![AI 智能导购](docs/screenshots/02-ai-shopping-guide.png) |
 
-### AI 智能导购
+| 全部商品 | 我的收藏 |
+| --- | --- |
+| ![全部商品](docs/screenshots/03-products.png) | ![我的收藏](docs/screenshots/04-favorites.png) |
 
-![AI 智能导购与商品推荐](docs/screenshots/ai-shopping-guide.png)
+| 购物车 | 我的订单 |
+| --- | --- |
+| ![购物车](docs/screenshots/05-cart.png) | ![我的订单](docs/screenshots/06-orders.png) |
 
-### 商品详情
+#### 个人中心
 
-![商品详情与 AI 问答](docs/screenshots/product-detail.png)
+![个人中心](docs/screenshots/07-profile.png)
 
 ### 运营管理后台
 
-![商城商品管理后台](docs/screenshots/admin-product-management.png)
+| 运营工作台 | 用户管理 |
+| --- | --- |
+| ![运营工作台](docs/screenshots/08-admin-dashboard.png) | ![用户管理](docs/screenshots/09-user-management.png) |
+
+| AI 模型配置 | Agent Step 执行步骤 |
+| --- | --- |
+| ![AI 模型配置](docs/screenshots/10-ai-model-config.png) | ![Agent Step 执行步骤](docs/screenshots/11-agent-steps.png) |
 
 ## 当前进度
 
