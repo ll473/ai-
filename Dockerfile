@@ -12,13 +12,15 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-COPY pyproject.toml README.md ./
+COPY pyproject.toml uv.lock README.md alembic.ini ./
 COPY backend/ ./backend/
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir uv && uv sync --frozen --no-dev --no-editable
+
+ENV PATH="/app/.venv/bin:$PATH"
 
 COPY main.py ./
 COPY uploads/demo-products/ ./uploads/demo-products/
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 
 EXPOSE 8000
-CMD ["sh", "-c", "python -m backend.scripts.init_db && python -m backend.scripts.seed_demo && exec uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "python -m backend.scripts.migrate && python -m backend.scripts.setup_ai && python -m backend.scripts.seed_demo && exec uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
