@@ -22,6 +22,7 @@ from backend.app.models.trade import (
     Order,
     OrderItem,
     PaymentTransaction,
+    Promotion,
     Review,
 )
 from backend.app.models.user import User, UserAddress, Wallet, WalletTransaction
@@ -48,6 +49,7 @@ __all__ = [
     "Product",
     "ProductImage",
     "ProductSku",
+    "Promotion",
     "PromptTemplate",
     "Recommendation",
     "RecommendationItem",

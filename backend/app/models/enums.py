@@ -17,6 +17,11 @@ class ProductStatus(StrEnum):
     OFF_SALE = "OFF_SALE"
 
 
+class PromotionType(StrEnum):
+    PERCENT = "PERCENT"
+    FIXED = "FIXED"
+
+
 class OrderStatus(StrEnum):
     PENDING_PAYMENT = "PENDING_PAYMENT"
     PAID = "PAID"

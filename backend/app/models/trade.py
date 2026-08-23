@@ -17,7 +17,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.models.base import Base, IdMixin, TimestampMixin
-from backend.app.models.enums import OrderStatus, PaymentStatus
+from backend.app.models.enums import OrderStatus, PaymentStatus, PromotionType
 
 
 class CartItem(IdMixin, TimestampMixin, Base):
@@ -106,5 +106,23 @@ class AfterSaleRule(IdMixin, TimestampMixin, Base):
     rule_type: Mapped[str] = mapped_column(String(40), index=True)
     keywords: Mapped[list[str] | None] = mapped_column(JSON)
     content: Mapped[str] = mapped_column(Text)
+    priority: Mapped[int] = mapped_column(Integer, default=0)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+
+
+class Promotion(IdMixin, TimestampMixin, Base):
+    __tablename__ = "promotions"
+
+    name: Mapped[str] = mapped_column(String(120))
+    product_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("products.id"), index=True
+    )
+    promotion_type: Mapped[PromotionType] = mapped_column(String(20), index=True)
+    value: Mapped[Decimal] = mapped_column(Numeric(14, 2))
+    minimum_amount: Mapped[Decimal] = mapped_column(
+        Numeric(14, 2), default=Decimal("0.00")
+    )
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     priority: Mapped[int] = mapped_column(Integer, default=0)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
