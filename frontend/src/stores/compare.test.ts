@@ -50,4 +50,21 @@ describe('useCompareStore', () => {
     expect(store.items).toEqual([])
     expect(localStorage.getItem('ai-commerce-product-compare-v1')).toBeNull()
   })
+
+  it('replaces selections with unique products from the first category, capped at four', () => {
+    const store = useCompareStore()
+
+    store.replaceFromProducts([
+      summary(1, 10),
+      summary(1, 10),
+      summary(2, 11),
+      summary(3, 10),
+      summary(4, 10),
+      summary(5, 10),
+      summary(6, 10),
+    ])
+
+    expect(store.ids).toEqual([1, 3, 4, 5])
+    expect(store.items.every(item => item.category_id === 10)).toBe(true)
+  })
 })

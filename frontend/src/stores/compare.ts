@@ -88,7 +88,14 @@ export const useCompareStore = defineStore('compare', () => {
   }
 
   function replaceFromProducts(products: ProductSummary[]) {
-    items.value = products.slice(0, 4).map(toSelection)
+    const selections: CompareSelection[] = []
+    for (const product of products) {
+      if (selections.some(item => item.id === product.id)) continue
+      if (selections.length && selections[0].category_id !== product.category_id) continue
+      selections.push(toSelection(product))
+      if (selections.length === 4) break
+    }
+    items.value = selections
     persist(items.value)
   }
 
