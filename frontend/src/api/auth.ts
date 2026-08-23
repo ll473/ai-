@@ -23,3 +23,20 @@ export async function getCurrentUser() {
   const response = await http.get<ApiResponse<User>>('/auth/me')
   return response.data.data
 }
+
+export async function updateProfile(payload: {
+  nickname?: string | null
+  email?: string | null
+  phone?: string | null
+  avatar_url?: string | null
+}) {
+  const response = await http.patch<ApiResponse<User>>('/auth/me', payload)
+  return response.data.data
+}
+
+export async function changePassword(currentPassword: string, newPassword: string) {
+  await http.post('/auth/change-password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  })
+}

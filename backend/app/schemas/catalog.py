@@ -1,8 +1,8 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from backend.app.models.enums import ProductStatus
 
@@ -168,3 +168,69 @@ class UploadedImage(BaseModel):
     url: str
     content_type: str
     size: int
+
+
+class ProductViewRequest(BaseModel):
+    session_key: str | None = Field(default=None, max_length=64)
+    source: str | None = Field(default=None, max_length=40)
+
+
+class SearchSuggestion(BaseModel):
+    kind: Literal["product", "category", "brand", "query"]
+    label: str
+    value: str
+    product_id: int | None = None
+
+
+class SearchFacetItem(BaseModel):
+    id: int
+    name: str
+    count: int
+
+
+class SearchFacets(BaseModel):
+    categories: list[SearchFacetItem]
+    brands: list[SearchFacetItem]
+    min_price: Decimal | None = None
+    max_price: Decimal | None = None
+    in_stock_count: int = 0
+
+
+class CatalogSearchResult(BaseModel):
+    items: list[ProductSummary]
+    page: int
+    page_size: int
+    total: int
+    facets: SearchFacets
+    search_mode: Literal["catalog", "hybrid"] = "catalog"
+
+
+class SearchEventFilters(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    category_id: int | None = Field(default=None, ge=1)
+    brand_id: int | None = Field(default=None, ge=1)
+    min_price: Decimal | None = Field(default=None, ge=0)
+    max_price: Decimal | None = Field(default=None, ge=0)
+    in_stock: bool | None = None
+    sort: Literal["relevance", "newest", "sales", "rating", "price_asc", "price_desc"] | None = (
+        None
+    )
+    search_mode: Literal["catalog", "hybrid"] | None = None
+
+
+class SearchEventRequest(BaseModel):
+    event_type: Literal["search", "click"]
+    query: str | None = Field(default=None, max_length=200)
+    product_id: int | None = None
+    session_key: str = Field(min_length=8, max_length=64)
+    filters: SearchEventFilters | None = None
+    result_count: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def validate_event_context(self) -> "SearchEventRequest":
+        if self.event_type == "search" and not (self.query or "").strip():
+            raise ValueError("搜索事件必须包含关键词")
+        if self.event_type == "click" and self.product_id is None:
+            raise ValueError("点击事件必须包含商品 ID")
+        return self

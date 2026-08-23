@@ -21,7 +21,9 @@ const router = createRouter({
         { path: 'wallet', name: 'wallet', meta: { requiresAuth: true }, component: () => import('../views/store/WalletView.vue') },
         { path: 'addresses', name: 'addresses', meta: { requiresAuth: true }, component: () => import('../views/store/AddressView.vue') },
         { path: 'profile', name: 'profile', meta: { requiresAuth: true }, component: () => import('../views/store/ProfileView.vue') },
+        { path: 'account', name: 'account-settings', meta: { requiresAuth: true }, component: () => import('../views/store/AccountSettingsView.vue') },
         { path: 'ai-guide', name: 'ai-guide', meta: { requiresAuth: true }, component: () => import('../views/store/ShoppingGuideView.vue') },
+        { path: 'assistant', name: 'assistant', meta: { requiresAuth: true }, component: () => import('../views/store/AssistantView.vue') },
       ],
     },
     { path: '/login', name: 'login', component: () => import('../views/LoginView.vue') },
@@ -39,6 +41,7 @@ const router = createRouter({
         { path: 'orders', name: 'admin-orders', component: () => import('../views/admin/OrderManagementView.vue') },
         { path: 'reviews', name: 'admin-reviews', component: () => import('../views/admin/ReviewManagementView.vue') },
         { path: 'after-sale', name: 'admin-after-sale', component: () => import('../views/admin/AfterSaleRulesView.vue') },
+        { path: 'promotions', name: 'admin-promotions', component: () => import('../views/admin/PromotionManagementView.vue') },
 
         { path: 'ai', redirect: '/admin/ai/models' },
         { path: 'ai/models', name: 'admin-ai-models', meta: { adminTab: 'models' }, component: () => import('../views/admin/AiManagementView.vue') },
@@ -57,7 +60,7 @@ const router = createRouter({
         { path: 'operations/runs', name: 'admin-agent-runs', meta: { recordsMode: 'runs' }, component: () => import('../views/admin/AgentRecordsView.vue') },
         { path: 'operations/steps', name: 'admin-agent-steps', meta: { recordsMode: 'steps' }, component: () => import('../views/admin/AgentRecordsView.vue') },
         { path: 'operations/recommendations', name: 'admin-recommendations', meta: { recordsMode: 'recommendations' }, component: () => import('../views/admin/AgentRecordsView.vue') },
-        { path: 'operations/questions', name: 'admin-product-questions', component: () => import('../views/admin/KnowledgeSearchView.vue') },
+        { path: 'operations/questions', name: 'admin-product-questions', component: () => import('../views/admin/QuestionManagementView.vue') },
         { path: 'operations/reviews', name: 'admin-review-analysis', meta: { operationSection: 'reviews' }, component: () => import('../views/admin/OperationsView.vue') },
         { path: 'operations/reports', name: 'admin-operation-reports', meta: { operationSection: 'reports' }, component: () => import('../views/admin/OperationsView.vue') },
       ],
@@ -73,7 +76,13 @@ router.beforeEach((to) => {
   }
   if (!to.meta.requiresAuth) return true
   const token = localStorage.getItem('access_token')
-  const user = JSON.parse(localStorage.getItem('current_user') || 'null')
+  let user = null
+  try {
+    user = JSON.parse(localStorage.getItem('current_user') || 'null')
+  } catch {
+    localStorage.removeItem('current_user')
+    localStorage.removeItem('access_token')
+  }
   if (!token || !user) return { name: 'login', query: { redirect: to.fullPath } }
   if (to.meta.requiresAdmin && user.role !== 'ADMIN') return { name: 'home' }
   return true

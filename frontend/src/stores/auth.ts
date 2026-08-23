@@ -4,10 +4,20 @@ import { computed, ref } from 'vue'
 import * as authApi from '../api/auth'
 import type { User } from '../types/api'
 
-const storedUser = localStorage.getItem('current_user')
+function readStoredUser(): User | null {
+  const stored = localStorage.getItem('current_user')
+  if (!stored) return null
+  try {
+    return JSON.parse(stored) as User
+  } catch {
+    localStorage.removeItem('current_user')
+    localStorage.removeItem('access_token')
+    return null
+  }
+}
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref<User | null>(storedUser ? JSON.parse(storedUser) : null)
+  const user = ref<User | null>(readStoredUser())
   const loading = ref(false)
   const isAuthenticated = computed(() => Boolean(user.value && localStorage.getItem('access_token')))
   const isAdmin = computed(() => user.value?.role === 'ADMIN')
@@ -45,5 +55,12 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
   }
 
-  return { user, loading, isAuthenticated, isAdmin, login, register, logout }
+  async function updateProfile(payload: Parameters<typeof authApi.updateProfile>[0]) {
+    const updated = await authApi.updateProfile(payload)
+    user.value = updated
+    localStorage.setItem('current_user', JSON.stringify(updated))
+    return updated
+  }
+
+  return { user, loading, isAuthenticated, isAdmin, login, register, logout, updateProfile }
 })

@@ -85,4 +85,3 @@ class QuestionType(StrEnum):
     PRICE_STOCK = "PRICE_STOCK"
     ORDER_STATUS = "ORDER_STATUS"
     AFTER_SALE = "AFTER_SALE"
-

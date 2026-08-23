@@ -5,6 +5,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { getBrands, getCategories, getProducts } from '../../api/catalog'
 import ProductCard from '../../components/ProductCard.vue'
 import StatePanel from '../../components/StatePanel.vue'
+import { demoMode } from '../../demo/config'
 import type { Brand, Category, ProductSummary } from '../../types/catalog'
 
 const products = ref<ProductSummary[]>([])
@@ -84,7 +85,7 @@ onMounted(async () => {
             <span>订单可查</span>
           </div>
         </div>
-        <RouterLink to="/ai-guide" class="campaign-action focus-ring">
+        <RouterLink v-if="!demoMode" to="/ai-guide" class="campaign-action focus-ring">
           <el-icon><MagicStick /></el-icon>
           <span>不知道怎么选？让购物助手帮你</span>
           <el-icon><ArrowRight /></el-icon>

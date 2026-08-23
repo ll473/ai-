@@ -15,6 +15,7 @@ const keyword = ref(typeof route.query.keyword === 'string' ? route.query.keywor
 const fullNavItems = [
   { label: '商城首页', path: '/' },
   { label: 'AI 智能导购', path: '/ai-guide' },
+  { label: 'AI 问答', path: '/assistant' },
   { label: '全部商品', path: '/products' },
   { label: '我的收藏', path: '/favorites' },
   { label: '购物车', path: '/cart' },
@@ -77,10 +78,12 @@ function logout() {
               </button>
               <template #dropdown>
                 <el-dropdown-menu>
+                  <el-dropdown-item v-if="auth.user?.role === 'ADMIN'" @click="router.push('/admin')">管理后台</el-dropdown-item>
                   <el-dropdown-item @click="router.push('/orders')">我的订单</el-dropdown-item>
                   <el-dropdown-item @click="router.push('/favorites')">我的收藏</el-dropdown-item>
                   <el-dropdown-item @click="router.push('/wallet')">我的钱包</el-dropdown-item>
                   <el-dropdown-item @click="router.push('/profile')">个人中心</el-dropdown-item>
+                  <el-dropdown-item @click="router.push('/account')">账号设置</el-dropdown-item>
                   <el-dropdown-item divided @click="logout">退出登录</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
@@ -121,7 +124,7 @@ function logout() {
         </RouterLink>
         <nav aria-label="页脚导航">
           <RouterLink to="/products">全部商品</RouterLink>
-          <RouterLink to="/ai-guide">智能导购</RouterLink>
+          <RouterLink v-if="!demoMode" to="/ai-guide">智能导购</RouterLink>
           <RouterLink v-if="auth.isAuthenticated" to="/favorites">我的收藏</RouterLink>
           <RouterLink v-if="auth.isAuthenticated" to="/orders">我的订单</RouterLink>
         </nav>
@@ -139,7 +142,8 @@ function logout() {
         <button v-for="item in navItems" :key="item.path" type="button" @click="go(item.path)">
           {{ item.label }}
         </button>
-        <button v-if="!auth.isAuthenticated" type="button" @click="go('/login')">登录</button>
+        <button v-if="auth.user?.role === 'ADMIN'" type="button" @click="go('/admin')">管理后台</button>
+        <button v-if="!demoMode && !auth.isAuthenticated" type="button" @click="go('/login')">登录</button>
       </nav>
     </el-drawer>
   </div>

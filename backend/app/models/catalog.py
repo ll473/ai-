@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
@@ -5,8 +6,10 @@ from sqlalchemy import (
     JSON,
     BigInteger,
     Boolean,
+    DateTime,
     ForeignKey,
     Integer,
+    LargeBinary,
     Numeric,
     String,
     Text,
@@ -67,6 +70,8 @@ class ProductImage(IdMixin, TimestampMixin, Base):
 
     product_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("products.id"), index=True)
     image_url: Mapped[str] = mapped_column(String(500))
+    content_type: Mapped[str | None] = mapped_column(String(100))
+    content: Mapped[bytes | None] = mapped_column(LargeBinary)
     alt_text: Mapped[str | None] = mapped_column(String(255))
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
@@ -92,3 +97,30 @@ class Favorite(IdMixin, TimestampMixin, Base):
 
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), index=True)
     product_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("products.id"), index=True)
+
+
+class ProductViewEvent(IdMixin, TimestampMixin, Base):
+    __tablename__ = "product_view_events"
+
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), index=True)
+    product_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("products.id"), index=True)
+    session_key: Mapped[str | None] = mapped_column(String(64), index=True)
+    source: Mapped[str | None] = mapped_column(String(40), index=True)
+    viewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+
+
+class SearchEvent(IdMixin, TimestampMixin, Base):
+    __tablename__ = "search_events"
+
+    user_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id"), index=True
+    )
+    product_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("products.id"), index=True
+    )
+    session_key: Mapped[str | None] = mapped_column(String(64), index=True)
+    event_type: Mapped[str] = mapped_column(String(20), index=True)
+    query: Mapped[str | None] = mapped_column(String(200), index=True)
+    filters: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    result_count: Mapped[int | None] = mapped_column(Integer)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)

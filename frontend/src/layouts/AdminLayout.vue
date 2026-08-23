@@ -29,6 +29,7 @@ const titles: Record<string, string> = {
   '/admin/orders': '订单管理',
   '/admin/reviews': '商品评价',
   '/admin/after-sale': '售后规则',
+  '/admin/promotions': '优惠活动',
   '/admin/ai/models': 'AI 模型配置',
   '/admin/ai/prompts': 'Prompt 模板',
   '/admin/ai/tools': 'Function Tool',
@@ -79,6 +80,7 @@ function logout() {
             <el-menu-item index="/admin/orders"><el-icon><Tickets /></el-icon><span>订单管理</span></el-menu-item>
             <el-menu-item index="/admin/reviews"><el-icon><ChatDotRound /></el-icon><span>商品评价</span></el-menu-item>
             <el-menu-item index="/admin/after-sale"><el-icon><Wallet /></el-icon><span>售后规则</span></el-menu-item>
+            <el-menu-item index="/admin/promotions"><el-icon><PriceTag /></el-icon><span>优惠活动</span></el-menu-item>
           </el-sub-menu>
 
           <el-sub-menu index="ai-config">

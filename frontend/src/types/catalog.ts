@@ -1,3 +1,5 @@
+import type { PageData } from './api'
+
 export type ProductStatus = 'DRAFT' | 'ON_SALE' | 'OFF_SALE'
 
 export interface Category {
@@ -78,3 +80,42 @@ export interface ProductQuery {
   max_price?: number
 }
 
+export type ProductSearchSort =
+  | 'relevance'
+  | 'newest'
+  | 'sales'
+  | 'rating'
+  | 'price_asc'
+  | 'price_desc'
+
+export interface ProductSearchQuery extends ProductQuery {
+  in_stock?: boolean
+  semantic?: boolean
+  sort?: ProductSearchSort
+}
+
+export interface SearchSuggestion {
+  kind: 'product' | 'category' | 'brand' | 'query'
+  label: string
+  value: string
+  product_id: number | null
+}
+
+export interface SearchFacetItem {
+  id: number
+  name: string
+  count: number
+}
+
+export interface SearchFacets {
+  categories: SearchFacetItem[]
+  brands: SearchFacetItem[]
+  min_price: string | null
+  max_price: string | null
+  in_stock_count: number
+}
+
+export interface CatalogSearchResult extends PageData<ProductSummary> {
+  facets: SearchFacets
+  search_mode: 'catalog' | 'hybrid'
+}

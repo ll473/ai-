@@ -7,7 +7,7 @@ from time import perf_counter
 from typing import Any, Self
 
 from pydantic import BaseModel, Field, ValidationError, model_validator
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.exceptions import AppError
@@ -25,6 +25,7 @@ from backend.app.models.user import Wallet
 from backend.app.repositories.ai import AiRepository
 from backend.app.schemas.ai import ToolExecutionPublic
 from backend.app.services.product_price_stock import ProductPriceStockService
+from backend.app.services.promotion import best_promotion
 
 
 class SearchProductsArgs(BaseModel):
@@ -160,11 +161,23 @@ class ToolCenter:
     async def _search_products(
         self, arguments: dict[str, Any], _: ToolContext
     ) -> dict[str, Any]:
-        args = SearchProductsArgs.model_validate(arguments)
+        normalized_arguments = dict(arguments)
+        try:
+            requested_limit = int(normalized_arguments.get("limit", 10))
+        except (TypeError, ValueError):
+            requested_limit = 10
+        normalized_arguments["limit"] = min(20, max(1, requested_limit))
+        args = SearchProductsArgs.model_validate(normalized_arguments)
         statement = select(Product).where(Product.status == ProductStatus.ON_SALE)
         if args.keyword:
             escaped = args.keyword.replace("%", r"\%").replace("_", r"\_")
-            statement = statement.where(Product.name.like(f"%{escaped}%", escape="\\"))
+            pattern = f"%{escaped}%"
+            statement = statement.where(
+                or_(
+                    Product.name.like(pattern, escape="\\"),
+                    Product.subtitle.like(pattern, escape="\\"),
+                )
+            )
         if args.min_price is not None:
             statement = statement.where(Product.max_price >= args.min_price)
         if args.max_price is not None:
@@ -311,6 +324,7 @@ class ToolCenter:
         result_items: list[dict[str, Any]] = []
         for item in accepted:
             available_stock = item.sku.stock - item.sku.locked_stock
+            promotion = await best_promotion(self.session, item.product.id, item.sku.price)
             self.ai.add(
                 RecommendationItem(
                     recommendation_id=recommendation.id,
@@ -319,7 +333,7 @@ class ToolCenter:
                     reason=item.reason,
                     price_snapshot=item.sku.price,
                     stock_snapshot=available_stock,
-                    promotion_snapshot=None,
+                    promotion_snapshot=promotion.snapshot if promotion else None,
                     validation_passed=True,
                 )
             )
@@ -332,6 +346,7 @@ class ToolCenter:
                     "reason": item.reason,
                     "verified_price": str(item.sku.price),
                     "verified_stock": available_stock,
+                    "promotion": promotion.snapshot if promotion else None,
                 }
             )
         return {

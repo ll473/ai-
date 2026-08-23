@@ -71,14 +71,17 @@ function openEditModel(model: ModelConfig) {
 
 async function load() {
   loading.value = true
-  try {
-    const [modelData, promptData, toolData, logData, runData] = await Promise.all([
+  const results = await Promise.allSettled([
       getModelConfigs(), getPromptTemplates(), getFunctionTools(), getToolLogs(), getAgentRuns(),
-    ])
-    models.value = modelData; prompts.value = promptData; tools.value = toolData
-    logs.value = logData.items; runs.value = runData.items
-  } catch (error) { ElMessage.error(error instanceof Error ? error.message : 'AI 配置加载失败') }
-  finally { loading.value = false }
+  ])
+  if (results[0].status === 'fulfilled') models.value = results[0].value
+  if (results[1].status === 'fulfilled') prompts.value = results[1].value
+  if (results[2].status === 'fulfilled') tools.value = results[2].value
+  if (results[3].status === 'fulfilled') logs.value = results[3].value.items
+  if (results[4].status === 'fulfilled') runs.value = results[4].value.items
+  const failed = results.filter((item) => item.status === 'rejected').length
+  if (failed) ElMessage.warning(`${failed} 项数据暂时无法加载，其余内容已正常显示`)
+  loading.value = false
 }
 
 async function saveModel() {

@@ -13,16 +13,18 @@ from backend.app.core.exceptions import AppError, NotFoundError
 from backend.app.models.ai import (
     AgentRun,
     AiModelConfig,
+    ConversationMessage,
     OperationReport,
     Recommendation,
     RecommendationItem,
     ReviewAnalysis,
 )
-from backend.app.models.catalog import Product
-from backend.app.models.enums import AgentRunStatus, OrderStatus
+from backend.app.models.catalog import Product, ProductViewEvent
+from backend.app.models.enums import AgentRunStatus, ConversationRole, OrderStatus
 from backend.app.models.trade import Order, OrderItem, Review
 from backend.app.repositories.ai import AiRepository
 from backend.app.schemas.ai import (
+    FrequentlyAskedQuestion,
     OperationReportGenerateRequest,
     OperationReportPublic,
     OperationsDashboardPublic,
@@ -198,6 +200,47 @@ class OperationsAiService:
             )
             or 0
         )
+        product_views = int(
+            await self.session.scalar(
+                select(func.count(ProductViewEvent.id)).where(
+                    ProductViewEvent.viewed_at >= start,
+                    ProductViewEvent.viewed_at <= end,
+                )
+            )
+            or 0
+        )
+        unique_viewers = int(
+            await self.session.scalar(
+                select(func.count(distinct(ProductViewEvent.user_id))).where(
+                    ProductViewEvent.viewed_at >= start,
+                    ProductViewEvent.viewed_at <= end,
+                )
+            )
+            or 0
+        )
+        question_rows = (
+            await self.session.execute(
+                select(ConversationMessage.content, func.count(ConversationMessage.id))
+                .where(
+                    ConversationMessage.role == ConversationRole.USER,
+                    ConversationMessage.created_at >= start,
+                    ConversationMessage.created_at <= end,
+                )
+                .group_by(ConversationMessage.content)
+                .order_by(func.count(ConversationMessage.id).desc())
+                .limit(8)
+            )
+        ).all()
+        questions_total = int(
+            await self.session.scalar(
+                select(func.count(ConversationMessage.id)).where(
+                    ConversationMessage.role == ConversationRole.USER,
+                    ConversationMessage.created_at >= start,
+                    ConversationMessage.created_at <= end,
+                )
+            )
+            or 0
+        )
         top_rows = (
             await self.session.execute(
                 select(
@@ -229,6 +272,16 @@ class OperationsAiService:
             successful_agent_runs=successful_agent_runs,
             recommendations=recommendations,
             recommendation_items=recommendation_items,
+            product_views=product_views,
+            unique_viewers=unique_viewers,
+            conversion_rate=round(min(100.0, paid_orders / product_views * 100), 2)
+            if product_views
+            else 0,
+            questions_total=questions_total,
+            frequent_questions=[
+                FrequentlyAskedQuestion(question=str(row[0]), count=int(row[1]))
+                for row in question_rows
+            ],
             top_products=[
                 TopProductMetric(
                     product_id=int(row[0]),

@@ -15,7 +15,16 @@ from backend.app.models.ai import (
     ToolCallLog,
 )
 from backend.app.models.base import Base
-from backend.app.models.catalog import Brand, Category, Favorite, Product, ProductImage, ProductSku
+from backend.app.models.catalog import (
+    Brand,
+    Category,
+    Favorite,
+    Product,
+    ProductImage,
+    ProductSku,
+    ProductViewEvent,
+    SearchEvent,
+)
 from backend.app.models.trade import (
     AfterSaleRule,
     CartItem,
@@ -49,6 +58,8 @@ __all__ = [
     "Product",
     "ProductImage",
     "ProductSku",
+    "ProductViewEvent",
+    "SearchEvent",
     "Promotion",
     "PromptTemplate",
     "Recommendation",
@@ -61,4 +72,3 @@ __all__ = [
     "Wallet",
     "WalletTransaction",
 ]
-

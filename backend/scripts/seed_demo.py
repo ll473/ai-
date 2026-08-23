@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.core.config import get_settings
 from backend.app.core.database import SessionLocal, engine
 from backend.app.core.security import hash_password
 from backend.app.models.ai import KnowledgeDocument, PromptTemplate
@@ -369,12 +370,15 @@ async def seed_prompts(session: AsyncSession) -> None:
 
 
 async def seed_demo() -> None:
+    settings = get_settings()
     async with SessionLocal() as session:
         products = await seed_catalog(session)
-        await seed_trade(session, products)
+        if settings.seed_demo_data:
+            await seed_trade(session, products)
         await seed_prompts(session)
         await session.commit()
-        print("Demo data ready: 3 categories, 4 brands, 4 products, 8 SKUs, 3 orders")
+        suffix = ", 3 demo orders" if settings.seed_demo_data else " (catalog only)"
+        print(f"Seed data ready: 3 categories, 4 brands, 4 products, 8 SKUs{suffix}")
     await engine.dispose()
 
 

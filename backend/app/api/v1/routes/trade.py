@@ -4,7 +4,9 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.api.dependencies import get_current_user
+from backend.app.core.config import get_settings
 from backend.app.core.database import get_db
+from backend.app.core.exceptions import AuthorizationError
 from backend.app.core.responses import ApiResponse
 from backend.app.models.user import User
 from backend.app.schemas.catalog import ProductSummary
@@ -164,6 +166,8 @@ async def get_wallet(session: DbSession, user: CurrentUser) -> ApiResponse[Walle
 async def recharge_wallet(
     payload: RechargeRequest, session: DbSession, user: CurrentUser
 ) -> ApiResponse[WalletPublic]:
+    if not get_settings().enable_demo_recharge:
+        raise AuthorizationError("演示充值功能未启用")
     return ApiResponse(
         message="充值成功",
         data=await TradeService(session).recharge_wallet(user.id, payload.amount),

@@ -5,6 +5,7 @@ import { onMounted, ref } from 'vue'
 
 import { getShoppingGuideRuns, runShoppingGuide } from '../../api/ai'
 import { addCartItem } from '../../api/trade'
+import MarkdownText from '../../components/MarkdownText.vue'
 import type { AgentRun, RecommendationItem } from '../../types/ai'
 
 const message = ref('')
@@ -13,6 +14,7 @@ const run = ref<AgentRun | null>(null)
 const history = ref<AgentRun[]>([])
 const historyLoading = ref(true)
 const addingSkuId = ref<number | null>(null)
+const conversationId = ref<number | null>(null)
 const quickRequests = [
   '预算 5000 元，想买一件适合日常办公的商品',
   '想给父母挑一件实用、操作简单的礼物',
@@ -37,7 +39,7 @@ async function loadHistory() {
     history.value = (await getShoppingGuideRuns(1, 12)).items
       .filter((item) => item.request_text.trim() && !/^\?{2}/.test(item.request_text.trim()))
       .slice(0, 8)
-  } catch {
+  } catch (error) {
     history.value = []
   } finally {
     historyLoading.value = false
@@ -52,10 +54,15 @@ async function submit() {
   running.value = true
   run.value = null
   try {
-    const result = await runShoppingGuide(message.value.trim(), 6)
+    const result = await runShoppingGuide(message.value.trim(), 6, conversationId.value)
     run.value = result
+    conversationId.value = result.conversation_id
     history.value = [result, ...history.value.filter((item) => item.id !== result.id)].slice(0, 8)
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message) {
+      ElMessage.error(error.message)
+      return
+    }
     ElMessage.error('暂时无法完成挑选，请稍后再试')
   } finally {
     running.value = false
@@ -68,6 +75,7 @@ function useQuickRequest(value: string) {
 
 function selectHistory(item: AgentRun) {
   run.value = item
+  conversationId.value = item.conversation_id
   message.value = item.request_text
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
@@ -75,6 +83,7 @@ function selectHistory(item: AgentRun) {
 function startNew() {
   message.value = ''
   run.value = null
+  conversationId.value = null
 }
 
 async function addRecommendation(item: RecommendationItem) {
@@ -182,7 +191,7 @@ onMounted(loadHistory)
           </header>
 
           <div class="answer-copy">
-            <p>{{ run.final_answer || '暂时没有找到合适的商品，可以换个条件再试试。' }}</p>
+            <MarkdownText :content="run.final_answer || '暂时没有找到合适的商品，可以换个条件再试试。'" />
           </div>
 
           <div v-if="run.recommendation?.summary" class="recommendation-summary">
@@ -308,9 +317,6 @@ onMounted(loadHistory)
 .result-heading > span { color: var(--color-ink-500); font-size: 11px; }
 .answer-copy {
   margin-top: 18px; padding: 16px 18px; border-radius: var(--radius-control); background: var(--color-brand-50);
-}
-.answer-copy p {
-  margin: 0; color: var(--color-ink-700); font-size: 13px; line-height: 1.8; white-space: pre-wrap;
 }
 .recommendation-summary { margin-top: 16px; color: var(--color-ink-500); font-size: 12px; line-height: 1.7; }
 .recommendation-list { display: grid; gap: 12px; margin-top: 16px; }

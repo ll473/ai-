@@ -9,7 +9,10 @@ from backend.app.core.responses import ApiResponse
 from backend.app.models.user import User
 from backend.app.repositories.ai import AiRepository
 from backend.app.schemas.ai import (
-    AgentRunPublic,
+    AgentRunAdminPublic,
+    ConversationDetail,
+    ConversationMessagePublic,
+    ConversationPublic,
     FunctionToolCreate,
     FunctionToolPublic,
     FunctionToolUpdate,
@@ -176,13 +179,13 @@ async def list_tool_logs(
     )
 
 
-@router.get("/runs", response_model=ApiResponse[PageData[AgentRunPublic]])
+@router.get("/runs", response_model=ApiResponse[PageData[AgentRunAdminPublic]])
 async def list_runs(
     session: DbSession,
     _: AdminUser,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
-) -> ApiResponse[PageData[AgentRunPublic]]:
+) -> ApiResponse[PageData[AgentRunAdminPublic]]:
     return ApiResponse(
         data=await ShoppingAgentService(session).list_admin_runs(
             page=page, page_size=page_size
@@ -190,8 +193,66 @@ async def list_runs(
     )
 
 
-@router.get("/runs/{run_id}", response_model=ApiResponse[AgentRunPublic])
+@router.get("/runs/{run_id}", response_model=ApiResponse[AgentRunAdminPublic])
 async def get_run(
     run_id: int, session: DbSession, _: AdminUser
-) -> ApiResponse[AgentRunPublic]:
+) -> ApiResponse[AgentRunAdminPublic]:
     return ApiResponse(data=await ShoppingAgentService(session).get_admin_run(run_id))
+
+
+@router.get("/conversations", response_model=ApiResponse[PageData[ConversationPublic]])
+async def list_conversations(
+    session: DbSession,
+    _: AdminUser,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+    scene: str | None = None,
+) -> ApiResponse[PageData[ConversationPublic]]:
+    rows, total = await AiRepository(session).list_all_conversations(
+        page=page, page_size=page_size, scene=scene
+    )
+    return ApiResponse(
+        data=PageData(
+            items=[
+                ConversationPublic(
+                    id=item.id,
+                    title=item.title,
+                    scene=item.scene,
+                    last_message_at=item.last_message_at,
+                    message_count=count,
+                    created_at=item.created_at,
+                )
+                for item, count in rows
+            ],
+            page=page,
+            page_size=page_size,
+            total=total,
+        )
+    )
+
+
+@router.get(
+    "/conversations/{conversation_id}",
+    response_model=ApiResponse[ConversationDetail],
+)
+async def get_conversation(
+    conversation_id: int, session: DbSession, _: AdminUser
+) -> ApiResponse[ConversationDetail]:
+    repository = AiRepository(session)
+    conversation = await repository.get_conversation(conversation_id)
+    if conversation is None:
+        from backend.app.core.exceptions import NotFoundError
+
+        raise NotFoundError("会话不存在")
+    messages = await repository.list_conversation_messages(conversation.id, limit=100)
+    return ApiResponse(
+        data=ConversationDetail(
+            id=conversation.id,
+            title=conversation.title,
+            scene=conversation.scene,
+            last_message_at=conversation.last_message_at,
+            message_count=len(messages),
+            created_at=conversation.created_at,
+            messages=[ConversationMessagePublic.model_validate(item) for item in messages],
+        )
+    )

@@ -7,7 +7,14 @@ from backend.app.api.dependencies import get_current_user
 from backend.app.core.database import get_db
 from backend.app.core.responses import ApiResponse
 from backend.app.models.user import User
-from backend.app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserPublic
+from backend.app.schemas.auth import (
+    LoginRequest,
+    PasswordChangeRequest,
+    ProfileUpdateRequest,
+    RegisterRequest,
+    TokenResponse,
+    UserPublic,
+)
 from backend.app.services.auth import AuthService
 
 router = APIRouter()
@@ -43,3 +50,23 @@ async def me(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> ApiResponse[UserPublic]:
     return ApiResponse(data=UserPublic.model_validate(current_user))
+
+
+@router.patch("/me", response_model=ApiResponse[UserPublic])
+async def update_me(
+    payload: ProfileUpdateRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> ApiResponse[UserPublic]:
+    user = await AuthService(session).update_profile(current_user, payload)
+    return ApiResponse(message="个人资料已更新", data=UserPublic.model_validate(user))
+
+
+@router.post("/change-password", response_model=ApiResponse[None])
+async def change_password(
+    payload: PasswordChangeRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> ApiResponse[None]:
+    await AuthService(session).change_password(current_user, payload)
+    return ApiResponse(message="密码修改成功，请重新登录", data=None)

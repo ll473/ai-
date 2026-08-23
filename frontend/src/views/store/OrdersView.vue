@@ -11,6 +11,9 @@ import type { OrderDetail, OrderItem, OrderStatus, OrderSummary } from '../../ty
 const route = useRoute()
 const router = useRouter()
 const orders = ref<OrderSummary[]>([])
+const page = ref(1)
+const pageSize = 10
+const total = ref(0)
 const loading = ref(true)
 const detailLoading = ref(false)
 const acting = ref(false)
@@ -30,7 +33,9 @@ const statusMap: Record<OrderStatus, { text: string; type: 'warning' | 'success'
 async function load() {
   loading.value = true
   try {
-    orders.value = (await getOrders()).items
+    const data = await getOrders(page.value, pageSize)
+    orders.value = data.items
+    total.value = data.total
     const target = Number(route.query.order)
     if (target) await openDetail(target)
   } catch (error) { ElMessage.error(error instanceof Error ? error.message : '订单加载失败') }
@@ -100,6 +105,12 @@ async function submitReview() {
 }
 
 onMounted(load)
+
+async function changePage(value: number) {
+  page.value = value
+  await load()
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 </script>
 
 <template>
@@ -116,6 +127,16 @@ onMounted(load)
         <div class="order-actions"><el-button @click="openDetail(order.id)">查看详情</el-button><el-button v-if="order.status === 'PENDING_PAYMENT'" type="primary" :loading="acting" @click="pay(order.id)">余额支付</el-button><el-button v-if="order.status === 'SHIPPED'" type="primary" :loading="acting" @click="confirmReceipt(order.id)">确认收货</el-button></div>
       </article>
     </div>
+    <el-pagination
+      v-if="total > pageSize"
+      class="orders-pagination"
+      background
+      layout="prev, pager, next"
+      :current-page="page"
+      :page-size="pageSize"
+      :total="total"
+      @current-change="changePage"
+    />
 
     <el-drawer v-model="drawerOpen" title="订单详情" size="min(620px, 94vw)">
       <el-skeleton v-if="detailLoading" :rows="8" animated />

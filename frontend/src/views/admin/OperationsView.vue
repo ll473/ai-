@@ -43,6 +43,9 @@ const metricCards = computed(() => {
     { label: '真实评价', value: value.reviews_total, note: `平均 ${value.average_rating.toFixed(1)} 分` },
     { label: '导购任务', value: value.agent_runs, note: `${value.successful_agent_runs} 次成功完成` },
     { label: '有效推荐', value: value.recommendations, note: `${value.recommendation_items} 个商品结果` },
+    { label: '商品浏览', value: value.product_views, note: `${value.unique_viewers} 位访问用户` },
+    { label: '浏览转化', value: `${value.conversion_rate.toFixed(1)}%`, note: '已支付订单 / 商品浏览' },
+    { label: '用户咨询', value: value.questions_total, note: `${value.frequent_questions.length} 个高频问题` },
   ]
 })
 

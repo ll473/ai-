@@ -4,10 +4,13 @@ import { demoMode } from '../demo/config'
 import type { ApiResponse, PageData } from '../types/api'
 import type {
   Brand,
+  CatalogSearchResult,
   Category,
   ProductDetail,
   ProductQuery,
+  ProductSearchQuery,
   ProductSummary,
+  SearchSuggestion,
 } from '../types/catalog'
 
 export async function getCategories(admin = false) {
@@ -31,6 +34,60 @@ export async function getProducts(query: ProductQuery = {}, admin = false) {
   return response.data.data
 }
 
+export async function getSearchSuggestions(query: string, limit = 8) {
+  if (demoMode) {
+    const data = getDemoProducts({ keyword: query, page: 1, page_size: limit })
+    return data.items.map<SearchSuggestion>((item) => ({
+      kind: 'product',
+      label: item.name,
+      value: item.name,
+      product_id: item.id,
+    }))
+  }
+  const response = await http.get<ApiResponse<SearchSuggestion[]>>(
+    '/catalog/search/suggestions',
+    { params: { q: query, limit } },
+  )
+  return response.data.data
+}
+
+export async function searchCatalog(query: ProductSearchQuery = {}) {
+  if (demoMode) {
+    const data = getDemoProducts(query)
+    return {
+      ...data,
+      facets: {
+        categories: [],
+        brands: [],
+        min_price: null,
+        max_price: null,
+        in_stock_count: data.total,
+      },
+      search_mode: 'catalog',
+    } satisfies CatalogSearchResult
+  }
+  const response = await http.get<ApiResponse<CatalogSearchResult>>('/catalog/search', {
+    params: query,
+  })
+  return response.data.data
+}
+
+export async function recordSearchEvent(payload: {
+  event_type: 'search' | 'click'
+  query?: string
+  product_id?: number
+  result_count?: number
+  filters?: Record<string, unknown>
+}) {
+  if (demoMode) return
+  let sessionKey = sessionStorage.getItem('commerce_session')
+  if (!sessionKey) {
+    sessionKey = crypto.randomUUID()
+    sessionStorage.setItem('commerce_session', sessionKey)
+  }
+  await http.post('/catalog/search-events', { ...payload, session_key: sessionKey })
+}
+
 export async function getProduct(productId: number, admin = false) {
   if (demoMode && !admin) {
     const product = getDemoProduct(productId)
@@ -42,6 +99,18 @@ export async function getProduct(productId: number, admin = false) {
     : `/catalog/products/${productId}`
   const response = await http.get<ApiResponse<ProductDetail>>(path)
   return response.data.data
+}
+
+export async function recordProductView(productId: number, source = 'DETAIL') {
+  let sessionKey = sessionStorage.getItem('commerce_session')
+  if (!sessionKey) {
+    sessionKey = crypto.randomUUID()
+    sessionStorage.setItem('commerce_session', sessionKey)
+  }
+  await http.post(`/catalog/products/${productId}/view`, {
+    session_key: sessionKey,
+    source,
+  })
 }
 
 export async function createCategory(payload: Omit<Category, 'id' | 'created_at'>) {

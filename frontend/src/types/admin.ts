@@ -24,3 +24,30 @@ export interface AfterSaleRule {
 }
 
 export type AfterSaleRulePayload = Omit<AfterSaleRule, 'id' | 'created_at' | 'updated_at'>
+
+export interface Promotion {
+  id: number
+  name: string
+  product_id: number | null
+  promotion_type: 'PERCENT' | 'FIXED'
+  value: string
+  minimum_amount: string
+  starts_at: string
+  ends_at: string
+  priority: number
+  enabled: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface PromotionPayload {
+  name: string
+  product_id: number | null
+  promotion_type: Promotion['promotion_type']
+  value: number
+  minimum_amount: number
+  starts_at: string
+  ends_at: string
+  priority: number
+  enabled: boolean
+}

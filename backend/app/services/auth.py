@@ -5,7 +5,12 @@ from backend.app.core.security import create_access_token, hash_password, verify
 from backend.app.models.enums import UserStatus
 from backend.app.models.user import User, Wallet
 from backend.app.repositories.user import UserRepository
-from backend.app.schemas.auth import LoginRequest, RegisterRequest
+from backend.app.schemas.auth import (
+    LoginRequest,
+    PasswordChangeRequest,
+    ProfileUpdateRequest,
+    RegisterRequest,
+)
 
 
 class AuthService:
@@ -44,3 +49,22 @@ class AuthService:
 
         token = create_access_token(str(user.id), extra={"role": str(user.role)})
         return user, token
+
+    async def update_profile(self, user: User, payload: ProfileUpdateRequest) -> User:
+        if payload.email and await self.users.email_exists(payload.email, exclude_id=user.id):
+            raise ConflictError("邮箱已被其他账号使用")
+        if payload.phone and await self.users.phone_exists(payload.phone, exclude_id=user.id):
+            raise ConflictError("手机号已被其他账号使用")
+        for field, value in payload.model_dump(exclude_unset=True).items():
+            setattr(user, field, value)
+        await self.session.commit()
+        await self.session.refresh(user)
+        return user
+
+    async def change_password(self, user: User, payload: PasswordChangeRequest) -> None:
+        if not verify_password(payload.current_password, user.password_hash):
+            raise AuthenticationError("当前密码不正确")
+        if verify_password(payload.new_password, user.password_hash):
+            raise ConflictError("新密码不能与当前密码相同")
+        user.password_hash = hash_password(payload.new_password)
+        await self.session.commit()

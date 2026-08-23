@@ -90,6 +90,7 @@ export interface Recommendation {
 export interface AgentRun {
   id: number
   run_no: string
+  conversation_id: number | null
   status: 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'MAX_STEPS_REACHED'
   request_text: string
   final_answer: string | null
@@ -99,7 +100,7 @@ export interface AgentRun {
   total_duration_ms: number | null
   started_at: string
   finished_at: string | null
-  steps: AgentStep[]
+  steps?: AgentStep[]
   recommendation: Recommendation | null
 }
 
@@ -152,7 +153,31 @@ export interface KnowledgeCitation {
 
 export interface ProductQuestionResult {
   answer: string
+  question_type: 'PRODUCT_KNOWLEDGE' | 'PRICE_STOCK' | 'ORDER_STATUS' | 'AFTER_SALE'
+  conversation_id: number | null
   citations: KnowledgeCitation[]
+}
+
+export interface ConversationSummary {
+  id: number
+  title: string | null
+  scene: string
+  last_message_at: string | null
+  message_count: number
+  created_at: string
+}
+
+export interface ConversationMessage {
+  id: number
+  role: 'SYSTEM' | 'USER' | 'ASSISTANT' | 'TOOL'
+  content: string
+  question_type: ProductQuestionResult['question_type'] | null
+  metadata_json: Record<string, unknown> | null
+  created_at: string
+}
+
+export interface ConversationDetail extends ConversationSummary {
+  messages: ConversationMessage[]
 }
 
 export interface ReviewAnalysis {
@@ -192,6 +217,11 @@ export interface OperationsDashboard {
   successful_agent_runs: number
   recommendations: number
   recommendation_items: number
+  product_views: number
+  unique_viewers: number
+  conversion_rate: number
+  questions_total: number
+  frequent_questions: Array<{ question: string; count: number }>
   top_products: TopProductMetric[]
 }
 

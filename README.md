@@ -67,7 +67,7 @@ Python + Vue 的前后端分离商城，在完整交易闭环之上提供 RAG、
 
 - Python 3.12
 - MySQL 8.x（推荐）
-- Node.js 18+
+- Node.js 20.19+ 或 22.12+
 - Qdrant 1.x
 
 ## 本地启动
@@ -95,11 +95,12 @@ Copy-Item .env.example .env
 部署会自动完成以下工作：
 
 - 构建 Vue 商城页面并由 FastAPI 在同一个网址提供访问；
-- 创建数据库表并写入演示商品；
+- 使用 Alembic 创建或升级数据库结构；
+- 初始化默认 AI 模型记录和内置工具；
 - 生成独立的登录密钥；
 - 开放注册、登录、商品浏览、收藏、购物车和订单等完整功能。
 
-如需启用 AI 导购，请在部署平台中补充 `AI_API_KEY`；如需启用知识库向量检索，还需要填写 `QDRANT_URL` 和 `QDRANT_API_KEY`。
+如需启用 AI 导购，请在部署平台中补充 `AI_API_KEY`；如需启用知识库向量检索，还需要填写 `QDRANT_URL` 和 `QDRANT_API_KEY`。部署时会自动准备公开商品目录，但生产环境默认不会创建演示账号和演示订单，也不会开放演示充值；只有明确设置 `SEED_DEMO_DATA=true` 或 `ENABLE_DEMO_RECHARGE=true` 时才会启用对应的演示能力。
 
 先在 MySQL 创建数据库：
 
@@ -110,7 +111,8 @@ CREATE DATABASE ai_commerce CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 修改 `.env` 中的 `DATABASE_URL`，然后初始化本地表并创建管理员：
 
 ```powershell
-uv run python -m backend.scripts.init_db
+uv run python -m backend.scripts.migrate
+uv run python -m backend.scripts.setup_ai
 uv run python -m backend.scripts.create_admin admin
 ```
 

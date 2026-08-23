@@ -1,9 +1,11 @@
 from datetime import datetime
 from decimal import Decimal
 from typing import Any, Literal, Self
+from urllib.parse import urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from backend.app.core.config import get_settings
 from backend.app.models.enums import (
     AgentRunStatus,
     AgentStepType,
@@ -35,6 +37,11 @@ class ModelConfigBase(BaseModel):
     enabled: bool = True
     is_default: bool = False
 
+    @model_validator(mode="after")
+    def validate_base_url(self) -> Self:
+        _validate_ai_base_url(self.base_url)
+        return self
+
 
 class ModelConfigCreate(ModelConfigBase):
     api_key: str | None = Field(default=None, min_length=8, max_length=500)
@@ -51,6 +58,23 @@ class ModelConfigUpdate(BaseModel):
     max_tokens: int | None = Field(default=None, ge=128, le=128000)
     enabled: bool | None = None
     is_default: bool | None = None
+
+    @model_validator(mode="after")
+    def validate_base_url(self) -> Self:
+        _validate_ai_base_url(self.base_url)
+        return self
+
+
+def _validate_ai_base_url(value: str | None) -> None:
+    if value is None:
+        return
+    parsed = urlparse(value)
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme != "https" or not host:
+        raise ValueError("AI base URL 必须使用 HTTPS")
+    allowed = get_settings().ai_allowed_host_list
+    if host not in allowed and not any(host.endswith(f".{item}") for item in allowed):
+        raise ValueError("AI base URL 不在可信服务商列表中")
 
 
 class ModelConfigPublic(ModelConfigBase):
@@ -163,6 +187,7 @@ class ToolCallLogPublic(BaseModel):
 class ShoppingGuideRequest(BaseModel):
     message: str = Field(min_length=2, max_length=2000)
     max_steps: int = Field(default=6, ge=1, le=10)
+    conversation_id: int | None = Field(default=None, ge=1)
 
 
 class RecommendationItemPublic(BaseModel):
@@ -202,6 +227,7 @@ class AgentStepPublic(BaseModel):
 class AgentRunPublic(BaseModel):
     id: int
     run_no: str
+    conversation_id: int | None
     status: AgentRunStatus
     request_text: str
     final_answer: str | None
@@ -211,8 +237,11 @@ class AgentRunPublic(BaseModel):
     total_duration_ms: int | None
     started_at: datetime
     finished_at: datetime | None
-    steps: list[AgentStepPublic]
     recommendation: RecommendationPublic | None = None
+
+
+class AgentRunAdminPublic(AgentRunPublic):
+    steps: list[AgentStepPublic]
 
 
 class KnowledgeDocumentCreate(BaseModel):
@@ -296,6 +325,7 @@ class ConversationMessagePublic(BaseModel):
     role: ConversationRole
     content: str
     question_type: QuestionType | None
+    metadata_json: dict[str, Any] | None
     created_at: datetime
 
 
@@ -348,6 +378,11 @@ class TopProductMetric(BaseModel):
     revenue: Decimal
 
 
+class FrequentlyAskedQuestion(BaseModel):
+    question: str
+    count: int
+
+
 class OperationsDashboardPublic(BaseModel):
     period_start: datetime
     period_end: datetime
@@ -362,6 +397,11 @@ class OperationsDashboardPublic(BaseModel):
     successful_agent_runs: int
     recommendations: int
     recommendation_items: int
+    product_views: int = 0
+    unique_viewers: int = 0
+    conversion_rate: float = 0
+    questions_total: int = 0
+    frequent_questions: list[FrequentlyAskedQuestion] = Field(default_factory=list)
     top_products: list[TopProductMetric]
 
 

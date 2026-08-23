@@ -187,7 +187,7 @@ class CatalogService:
         return _sku_public(sku)
 
     async def update_sku(self, sku_id: int, payload: SkuUpdate) -> SkuPublic:
-        sku = await self.catalog.get_sku(sku_id)
+        sku = await self.catalog.get_sku(sku_id, lock=True)
         if sku is None:
             raise NotFoundError("SKU 不存在")
         changes = payload.model_dump(exclude_unset=True)
@@ -195,6 +195,8 @@ class CatalogService:
             changes["sku_no"], exclude_id=sku_id
         ):
             raise ConflictError("SKU 编号已存在")
+        if changes.get("stock", sku.stock) < sku.locked_stock:
+            raise ConflictError("库存不能低于待支付订单已锁定的数量")
         _apply_changes(sku, changes)
         await self.session.flush()
         await self.catalog.update_product_price_range(sku.product_id)

@@ -18,7 +18,7 @@ const copy = computed(() => ({
   steps: ['Agent Step 执行步骤', '逐步检查模型决策、工具调用、校验与最终回答。'],
   recommendations: ['AI 推荐商品', '汇总 Agent 已验证并向客户展示的推荐商品与推荐理由。'],
 }[mode.value] || ['智能导购记录', '查看智能导购执行记录。']))
-const steps = computed(() => runs.value.flatMap((run) => run.steps.map((step) => ({ ...step, run_no: run.run_no, request_text: run.request_text }))))
+const steps = computed(() => runs.value.flatMap((run) => (run.steps || []).map((step) => ({ ...step, run_no: run.run_no, request_text: run.request_text }))))
 const recommendations = computed(() => runs.value.flatMap((run) => (run.recommendation?.items || []).map((item) => ({ ...item, run_no: run.run_no, request_text: run.request_text, summary: run.recommendation?.summary || '' }))))
 const statusType = (status: string) => status === 'SUCCEEDED' ? 'success' : status === 'FAILED' ? 'danger' : 'warning'
 const formatDate = (value: string | null) => value ? new Date(value).toLocaleString('zh-CN') : '—'

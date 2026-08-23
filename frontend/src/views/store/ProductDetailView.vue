@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { MagicStick, Picture, ShoppingCart, Star } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { askProductQuestion } from '../../api/ai'
-import { getProduct } from '../../api/catalog'
+import { getProduct, recordProductView } from '../../api/catalog'
 import {
   addCartItem,
   addFavorite,
@@ -86,16 +86,21 @@ async function loadProduct() {
   try {
     const data = await getProduct(Number(route.params.id))
     product.value = data
-    selectedSku.value = data.skus[0] || null
+    if (auth.isAuthenticated && !demoMode) void recordProductView(data.id).catch(() => undefined)
+    selectedSku.value = data.skus.find((sku) => sku.enabled && sku.available_stock > 0) || null
     activeImage.value = data.images[0]?.image_url || data.main_image_url || ''
     if (auth.isAuthenticated) {
       try { favorite.value = await getFavoriteStatus(data.id) }
       catch { favorite.value = false }
     }
-    reviewsLoading.value = true
-    try { reviews.value = (await getProductReviews(data.id)).items }
-    catch { reviews.value = [] }
-    finally { reviewsLoading.value = false }
+    if (demoMode) {
+      reviews.value = []
+    } else {
+      reviewsLoading.value = true
+      try { reviews.value = (await getProductReviews(data.id)).items }
+      catch { reviews.value = [] }
+      finally { reviewsLoading.value = false }
+    }
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '商品加载失败'
   } finally {
@@ -168,6 +173,7 @@ async function askQuestion() {
 }
 
 onMounted(loadProduct)
+watch(() => route.params.id, loadProduct)
 </script>
 
 <template>

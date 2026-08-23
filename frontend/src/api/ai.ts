@@ -1,6 +1,6 @@
 import type { PageData } from '../types/api'
 import type {
-  AgentRun, FunctionTool, KnowledgeChunk, KnowledgeDocument, ModelConfig, ProductQuestionResult,
+  AgentRun, ConversationDetail, ConversationSummary, FunctionTool, KnowledgeChunk, KnowledgeDocument, ModelConfig, ProductQuestionResult,
   OperationReport, OperationsDashboard, PromptTemplate, ReviewAnalysis, ToolCallLog,
   ToolExecution,
 } from '../types/ai'
@@ -68,14 +68,42 @@ export async function getAgentRuns() {
   return (await http.get('/admin/ai/runs')).data.data as PageData<AgentRun>
 }
 
-export async function runShoppingGuide(message: string, maxSteps = 6) {
-  return (await http.post('/ai/shopping-guide', { message, max_steps: maxSteps })).data.data as AgentRun
+export async function runShoppingGuide(message: string, maxSteps = 6, conversationId?: number | null) {
+  return (await http.post('/ai/shopping-guide', {
+    message,
+    max_steps: maxSteps,
+    conversation_id: conversationId || null,
+  }, {
+    // A guide run may include several model/tool round trips. The global 15 s
+    // timeout is appropriate for normal CRUD calls but too short for this flow.
+    timeout: 120_000,
+  })).data.data as AgentRun
 }
 
 export async function getShoppingGuideRuns(page = 1, pageSize = 10) {
   return (
     await http.get('/ai/runs', { params: { page, page_size: pageSize } })
   ).data.data as PageData<AgentRun>
+}
+
+export async function getConversations(page = 1, pageSize = 10) {
+  return (await http.get('/ai/conversations', {
+    params: { page, page_size: pageSize },
+  })).data.data as PageData<ConversationSummary>
+}
+
+export async function getConversation(id: number) {
+  return (await http.get(`/ai/conversations/${id}`)).data.data as ConversationDetail
+}
+
+export async function getAdminConversations(page = 1, pageSize = 20, scene = 'PRODUCT_QA') {
+  return (await http.get('/admin/ai/conversations', {
+    params: { page, page_size: pageSize, scene },
+  })).data.data as PageData<ConversationSummary>
+}
+
+export async function getAdminConversation(id: number) {
+  return (await http.get(`/admin/ai/conversations/${id}`)).data.data as ConversationDetail
 }
 
 export async function getKnowledgeDocuments() {
@@ -110,10 +138,19 @@ export async function indexKnowledgeDocument(documentId: number) {
   return (await http.post(`/admin/knowledge/documents/${documentId}/index`)).data.data as KnowledgeDocument
 }
 
-export async function askProductQuestion(question: string, productId?: number) {
+export async function askProductQuestion(
+  question: string,
+  productId?: number,
+  questionType: ProductQuestionResult['question_type'] = 'PRODUCT_KNOWLEDGE',
+  orderNo?: string,
+  conversationId?: number | null,
+) {
   return (await http.post('/ai/product-qa', {
     question,
+    question_type: questionType,
     product_id: productId || null,
+    order_no: orderNo || null,
+    conversation_id: conversationId || null,
     top_k: 5,
   })).data.data as ProductQuestionResult
 }

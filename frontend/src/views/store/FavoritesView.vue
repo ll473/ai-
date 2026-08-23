@@ -13,6 +13,8 @@ const products = ref<ProductSummary[]>([])
 const categories = ref<Category[]>([])
 const brands = ref<Brand[]>([])
 const total = ref(0)
+const page = ref(1)
+const pageSize = 12
 const loading = ref(true)
 const removingId = ref<number | null>(null)
 const error = ref('')
@@ -25,7 +27,7 @@ async function loadFavorites() {
   error.value = ''
   try {
     const [favoriteData, categoryData, brandData] = await Promise.all([
-      getFavorites(1, 50),
+      getFavorites(page.value, pageSize),
       getCategories(),
       getBrands(),
     ])
@@ -55,6 +57,12 @@ async function remove(product: ProductSummary) {
 }
 
 onMounted(loadFavorites)
+
+async function changePage(value: number) {
+  page.value = value
+  await loadFavorites()
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 </script>
 
 <template>
@@ -107,6 +115,16 @@ onMounted(loadFavorites)
         </el-button>
       </article>
     </div>
+    <el-pagination
+      v-if="total > pageSize"
+      class="favorites-pagination"
+      background
+      layout="prev, pager, next"
+      :current-page="page"
+      :page-size="pageSize"
+      :total="total"
+      @current-change="changePage"
+    />
   </div>
 </template>
 

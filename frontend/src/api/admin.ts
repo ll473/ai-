@@ -1,5 +1,5 @@
 import type { PageData } from '../types/api'
-import type { AdminUser, AfterSaleRule, AfterSaleRulePayload } from '../types/admin'
+import type { AdminUser, AfterSaleRule, AfterSaleRulePayload, Promotion, PromotionPayload } from '../types/admin'
 import { http } from './http'
 
 export async function getAdminUsers(params: {
@@ -34,4 +34,20 @@ export async function updateAfterSaleRule(id: number, payload: Partial<AfterSale
 
 export async function deleteAfterSaleRule(id: number) {
   await http.delete(`/admin/after-sale-rules/${id}`)
+}
+
+export async function getPromotions() {
+  return (await http.get('/admin/promotions', { params: { page_size: 100 } })).data.data as PageData<Promotion>
+}
+
+export async function createPromotion(payload: PromotionPayload) {
+  return (await http.post('/admin/promotions', payload)).data.data as Promotion
+}
+
+export async function updatePromotion(id: number, payload: Partial<PromotionPayload>) {
+  return (await http.patch(`/admin/promotions/${id}`, payload)).data.data as Promotion
+}
+
+export async function deletePromotion(id: number) {
+  await http.delete(`/admin/promotions/${id}`)
 }

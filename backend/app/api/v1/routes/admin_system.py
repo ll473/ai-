@@ -8,13 +8,16 @@ from backend.app.api.dependencies import require_admin
 from backend.app.core.database import get_db
 from backend.app.core.exceptions import NotFoundError
 from backend.app.core.responses import ApiResponse
-from backend.app.models.trade import AfterSaleRule
+from backend.app.models.trade import AfterSaleRule, Promotion
 from backend.app.models.user import User
 from backend.app.schemas.admin import (
     AdminUserStatusUpdate,
     AfterSaleRuleCreate,
     AfterSaleRulePublic,
     AfterSaleRuleUpdate,
+    PromotionCreate,
+    PromotionPublic,
+    PromotionUpdate,
 )
 from backend.app.schemas.auth import UserPublic
 from backend.app.schemas.common import PageData
@@ -159,3 +162,83 @@ async def delete_after_sale_rule(
     await session.delete(rule)
     await session.commit()
     return ApiResponse(message="售后规则已删除", data=None)
+
+
+@router.get("/promotions", response_model=ApiResponse[PageData[PromotionPublic]])
+async def list_promotions(
+    session: DbSession,
+    _: AdminUser,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> ApiResponse[PageData[PromotionPublic]]:
+    statement = select(Promotion)
+    total = int(await session.scalar(select(func.count()).select_from(Promotion)) or 0)
+    items = list(
+        (
+            await session.scalars(
+                statement.order_by(Promotion.priority.desc(), Promotion.id.desc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+            )
+        ).all()
+    )
+    return ApiResponse(
+        data=PageData(
+            items=[PromotionPublic.model_validate(item) for item in items],
+            page=page,
+            page_size=page_size,
+            total=total,
+        )
+    )
+
+
+@router.post(
+    "/promotions",
+    response_model=ApiResponse[PromotionPublic],
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_promotion(
+    payload: PromotionCreate, session: DbSession, _: AdminUser
+) -> ApiResponse[PromotionPublic]:
+    if payload.ends_at <= payload.starts_at:
+        from backend.app.core.exceptions import AppError
+
+        raise AppError("结束时间必须晚于开始时间", code="INVALID_PROMOTION_PERIOD")
+    item = Promotion(**payload.model_dump())
+    session.add(item)
+    await session.commit()
+    await session.refresh(item)
+    return ApiResponse(message="优惠活动已创建", data=PromotionPublic.model_validate(item))
+
+
+@router.patch("/promotions/{promotion_id}", response_model=ApiResponse[PromotionPublic])
+async def update_promotion(
+    promotion_id: int,
+    payload: PromotionUpdate,
+    session: DbSession,
+    _: AdminUser,
+) -> ApiResponse[PromotionPublic]:
+    item = await session.get(Promotion, promotion_id)
+    if item is None:
+        raise NotFoundError("优惠活动不存在")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(item, field, value)
+    if item.ends_at <= item.starts_at:
+        from backend.app.core.exceptions import AppError
+
+        raise AppError("结束时间必须晚于开始时间", code="INVALID_PROMOTION_PERIOD")
+    await session.commit()
+    await session.refresh(item)
+    return ApiResponse(message="优惠活动已更新", data=PromotionPublic.model_validate(item))
+
+
+@router.delete("/promotions/{promotion_id}", response_model=ApiResponse[None])
+async def delete_promotion(
+    promotion_id: int, session: DbSession, _: AdminUser
+) -> ApiResponse[None]:
+    item = await session.get(Promotion, promotion_id)
+    if item is None:
+        raise NotFoundError("优惠活动不存在")
+    await session.delete(item)
+    await session.commit()
+    return ApiResponse(message="优惠活动已删除", data=None)

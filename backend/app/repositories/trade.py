@@ -67,7 +67,9 @@ class TradeRepository:
             statement = statement.where(UserAddress.id != exclude_id)
         await self.session.execute(statement.values(is_default=False))
 
-    async def list_cart_rows(self, user_id: int, *, selected_only: bool = False) -> list[CartRow]:
+    async def list_cart_rows(
+        self, user_id: int, *, selected_only: bool = False, lock: bool = False
+    ) -> list[CartRow]:
         statement = (
             select(CartItem, Product, ProductSku)
             .join(Product, Product.id == CartItem.product_id)
@@ -76,7 +78,11 @@ class TradeRepository:
         )
         if selected_only:
             statement = statement.where(CartItem.selected.is_(True))
-        result = await self.session.execute(statement.order_by(CartItem.created_at.desc()))
+        if lock:
+            statement = statement.order_by(CartItem.id).with_for_update()
+        else:
+            statement = statement.order_by(CartItem.created_at.desc())
+        result = await self.session.execute(statement)
         return list(result.tuples().all())
 
     async def get_cart_item(self, user_id: int, item_id: int) -> CartItem | None:

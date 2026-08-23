@@ -19,12 +19,12 @@ oauth2_scheme = OAuth2PasswordBearer(
 )
 
 
-async def get_current_user(
+async def get_optional_current_user(
     token: Annotated[str | None, Depends(oauth2_scheme)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> User:
+) -> User | None:
     if not token:
-        raise AuthenticationError("请先登录")
+        return None
     try:
         payload = decode_access_token(token)
         user_id = int(payload["sub"])
@@ -35,6 +35,14 @@ async def get_current_user(
     if user is None or user.status != UserStatus.ACTIVE:
         raise AuthenticationError("用户不存在或已被禁用")
     return user
+
+
+async def get_current_user(
+    current_user: Annotated[User | None, Depends(get_optional_current_user)],
+) -> User:
+    if current_user is None:
+        raise AuthenticationError("请先登录")
+    return current_user
 
 
 async def require_admin(

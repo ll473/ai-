@@ -1,7 +1,3 @@
-from pathlib import Path
-from uuid import uuid4
-
-import anyio
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -53,26 +49,19 @@ class MediaService:
                 status_code=413,
             )
 
-        extension = ALLOWED_IMAGE_TYPES[file.content_type]
-        filename = f"{uuid4().hex}{extension}"
-        relative_path = Path("products") / str(product_id) / filename
-        destination = self.settings.upload_dir / relative_path
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        await anyio.Path(destination).write_bytes(content)
-
         image = ProductImage(
             product_id=product_id,
-            image_url=f"/uploads/{relative_path.as_posix()}",
+            image_url="",
+            content_type=file.content_type,
+            content=content,
             alt_text=alt_text,
             sort_order=sort_order,
         )
         self.session.add(image)
-        try:
-            await self.session.commit()
-            await self.session.refresh(image)
-        except Exception:
-            await anyio.Path(destination).unlink(missing_ok=True)
-            raise
+        await self.session.flush()
+        image.image_url = f"/api/v1/catalog/images/{image.id}"
+        await self.session.commit()
+        await self.session.refresh(image)
 
         if not product.main_image_url:
             product.main_image_url = image.image_url
@@ -85,3 +74,8 @@ class MediaService:
             size=len(content),
         )
 
+    async def get_product_image(self, image_id: int) -> tuple[bytes, str]:
+        image = await self.catalog.get_product_image(image_id)
+        if image is None or image.content is None:
+            raise NotFoundError("商品图片不存在")
+        return image.content, image.content_type or "application/octet-stream"

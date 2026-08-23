@@ -87,6 +87,7 @@ onMounted(async () => {
       <section class="profile-links">
         <div><h2>常用服务</h2><p>订单、地址与钱包信息集中管理。</p></div>
         <nav>
+          <RouterLink to="/account">编辑资料与修改密码</RouterLink>
           <RouterLink to="/orders">查看全部订单</RouterLink>
           <RouterLink to="/addresses">管理收货地址</RouterLink>
           <RouterLink to="/wallet">钱包与流水</RouterLink>

@@ -7,9 +7,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 
 from backend.app.api.v1.router import api_router
 from backend.app.core.config import get_settings
+from backend.app.core.database import engine
 from backend.app.core.exceptions import AppError
 
 settings = get_settings()
@@ -67,6 +69,13 @@ async def validation_error_handler(_: Request, exc: RequestValidationError) -> J
 @app.get("/health", include_in_schema=False)
 async def root_health() -> dict[str, str]:
     return {"status": "healthy"}
+
+
+@app.get("/ready", include_in_schema=False)
+async def readiness() -> dict[str, str]:
+    async with engine.connect() as connection:
+        await connection.execute(text("SELECT 1"))
+    return {"status": "ready"}
 
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)

@@ -27,14 +27,19 @@ class UserRepository:
         )
         return result.scalar_one_or_none()
 
-    async def email_exists(self, email: str) -> bool:
-        result = await self.session.execute(select(User.id).where(User.email == email).limit(1))
+    async def email_exists(self, email: str, *, exclude_id: int | None = None) -> bool:
+        statement = select(User.id).where(User.email == email)
+        if exclude_id is not None:
+            statement = statement.where(User.id != exclude_id)
+        result = await self.session.execute(statement.limit(1))
         return result.scalar_one_or_none() is not None
 
-    async def phone_exists(self, phone: str) -> bool:
-        result = await self.session.execute(select(User.id).where(User.phone == phone).limit(1))
+    async def phone_exists(self, phone: str, *, exclude_id: int | None = None) -> bool:
+        statement = select(User.id).where(User.phone == phone)
+        if exclude_id is not None:
+            statement = statement.where(User.id != exclude_id)
+        result = await self.session.execute(statement.limit(1))
         return result.scalar_one_or_none() is not None
 
     def add(self, user: User) -> None:
         self.session.add(user)
-

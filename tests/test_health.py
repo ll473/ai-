@@ -25,7 +25,11 @@ def test_openapi_contains_catalog_routes() -> None:
     schema = app.openapi()
 
     assert "/api/v1/catalog/products" in schema["paths"]
+    assert "/api/v1/catalog/search" in schema["paths"]
+    assert "/api/v1/catalog/search/suggestions" in schema["paths"]
+    assert "/api/v1/catalog/search-events" in schema["paths"]
     assert "/api/v1/catalog/products/{product_id}" in schema["paths"]
+    assert "/api/v1/catalog/images/{image_id}" in schema["paths"]
     assert "/api/v1/admin/catalog/products/{product_id}/images" in schema["paths"]
     assert "/api/v1/cart/items" in schema["paths"]
     assert "/api/v1/wallet/recharge" in schema["paths"]

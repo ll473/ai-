@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +20,7 @@ from backend.app.models.ai import (
     ToolCallLog,
 )
 from backend.app.models.catalog import Product, ProductSku
+from backend.app.models.enums import DocumentStatus
 
 ToolLogRow = tuple[ToolCallLog, FunctionTool]
 KnowledgeDocumentRow = tuple[KnowledgeDocument, int]
@@ -130,6 +133,16 @@ class AiRepository:
             statement = statement.where(AgentRun.user_id == user_id)
         result = await self.session.execute(statement)
         return result.scalar_one_or_none()
+
+    async def count_user_runs_since(self, user_id: int, since: datetime) -> int:
+        return int(
+            await self.session.scalar(
+                select(func.count(AgentRun.id)).where(
+                    AgentRun.user_id == user_id, AgentRun.created_at >= since
+                )
+            )
+            or 0
+        )
 
     async def get_conversation(
         self, conversation_id: int, *, user_id: int | None = None
@@ -256,6 +269,21 @@ class AiRepository:
         )
         return list((await self.session.scalars(statement)).all())
 
+    async def list_ready_product_knowledge_chunks(
+        self, product_id: int, *, limit: int
+    ) -> list[KnowledgeChunkRow]:
+        statement = (
+            select(KnowledgeChunk, KnowledgeDocument)
+            .join(KnowledgeDocument, KnowledgeDocument.id == KnowledgeChunk.document_id)
+            .where(
+                KnowledgeChunk.product_id == product_id,
+                KnowledgeDocument.status == DocumentStatus.READY,
+            )
+            .order_by(KnowledgeDocument.updated_at.desc(), KnowledgeChunk.chunk_index)
+            .limit(limit)
+        )
+        return list((await self.session.execute(statement)).tuples().all())
+
     async def page_knowledge_chunks(
         self,
         *,
@@ -289,6 +317,38 @@ class AiRepository:
             ).tuples().all()
         )
         return rows, total
+
+    async def list_all_conversations(
+        self, *, page: int, page_size: int, scene: str | None = None
+    ) -> tuple[list[tuple[Conversation, int]], int]:
+        count_messages = (
+            select(
+                ConversationMessage.conversation_id,
+                func.count(ConversationMessage.id).label("message_count"),
+            )
+            .group_by(ConversationMessage.conversation_id)
+            .subquery()
+        )
+        statement = select(
+            Conversation,
+            func.coalesce(count_messages.c.message_count, 0),
+        ).outerjoin(count_messages, count_messages.c.conversation_id == Conversation.id)
+        if scene:
+            statement = statement.where(Conversation.scene == scene)
+        total_statement = select(func.count(Conversation.id))
+        if scene:
+            total_statement = total_statement.where(Conversation.scene == scene)
+        total = int(await self.session.scalar(total_statement) or 0)
+        rows = (
+            await self.session.execute(
+                statement.order_by(
+                    Conversation.last_message_at.desc(), Conversation.id.desc()
+                )
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+            )
+        ).all()
+        return [(item, int(count)) for item, count in rows], total
 
     async def get_knowledge_chunks_by_point_ids(
         self, point_ids: list[str]
