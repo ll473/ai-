@@ -70,6 +70,21 @@ export interface ProductDetail extends ProductSummary {
   skus: ProductSku[]
 }
 
+export interface ProductComparisonItem extends ProductSummary {
+  category_name: string
+  brand_name: string | null
+  parameters: Record<string, unknown> | null
+  skus: ProductSku[]
+  total_available_stock: number
+}
+
+export interface ProductComparisonResult {
+  items: ProductComparisonItem[]
+  unavailable_ids: number[]
+  category_id: number | null
+  category_name: string | null
+}
+
 export interface ProductQuery {
   page?: number
   page_size?: number

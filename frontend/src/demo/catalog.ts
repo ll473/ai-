@@ -3,7 +3,15 @@ import keyboardImage from '../../../uploads/demo-products/mechanical-keyboard.pn
 import headphoneImage from '../../../uploads/demo-products/noise-cancelling-headphones.png'
 import coffeeImage from '../../../uploads/demo-products/pour-over-coffee-set.png'
 
-import type { Brand, Category, ProductDetail, ProductQuery, ProductSummary } from '../types/catalog'
+import type {
+  Brand,
+  Category,
+  ProductComparisonItem,
+  ProductComparisonResult,
+  ProductDetail,
+  ProductQuery,
+  ProductSummary,
+} from '../types/catalog'
 
 const createdAt = '2026-08-04T00:00:00Z'
 
@@ -144,4 +152,46 @@ export function getDemoProducts(query: ProductQuery = {}) {
 
 export function getDemoProduct(productId: number) {
   return demoProductDetails.find((product) => product.id === productId)
+}
+
+export function getDemoProductComparison(productIds: number[]): ProductComparisonResult {
+  const orderedIds = [...new Set(productIds)]
+  if (orderedIds.length < 2 || orderedIds.length > 4)
+    throw new Error('请选择 2–4 件商品进行对比')
+
+  const productsById = new Map(
+    demoProductDetails
+      .filter(product => product.status === 'ON_SALE')
+      .map(product => [product.id, product]),
+  )
+  const selectedProducts = orderedIds
+    .map(productId => productsById.get(productId))
+    .filter((product): product is ProductDetail => Boolean(product))
+
+  if (new Set(selectedProducts.map(product => product.category_id)).size > 1)
+    throw new Error('只能对比同一分类商品')
+
+  const categoriesById = new Map(demoCategories.map(category => [category.id, category]))
+  const brandsById = new Map(demoBrands.map(brand => [brand.id, brand]))
+  const items = selectedProducts.map<ProductComparisonItem>((product) => {
+    const skus = product.skus.filter(sku => sku.enabled)
+    return {
+      ...toSummary(product),
+      category_name: categoriesById.get(product.category_id)?.name || '',
+      brand_name: product.brand_id === null
+        ? null
+        : brandsById.get(product.brand_id)?.name || null,
+      parameters: product.parameters,
+      skus,
+      total_available_stock: skus.reduce((total, sku) => total + sku.available_stock, 0),
+    }
+  })
+  const unavailable_ids = orderedIds.filter(productId => !productsById.has(productId))
+
+  return {
+    items,
+    unavailable_ids,
+    category_id: items[0]?.category_id || null,
+    category_name: items[0]?.category_name || null,
+  }
 }

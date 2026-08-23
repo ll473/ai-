@@ -318,7 +318,7 @@ git commit -m "feat: add product comparison catalog API"
 - Produces: `useCompareStore()`，公开 `items`、`ids`、`contains`、`add`、`remove`、`clear`、`replaceFromProducts`。
 - Produces: `CompareAddResult = { ok: true } | { ok: false; reason: 'category_mismatch' | 'limit_reached' }`。
 
-- [ ] **Step 1: 编写 store 失败测试**
+- [x] **Step 1: 编写 store 失败测试**
 
 在每条测试前执行 `localStorage.clear()` 和 `setActivePinia(createPinia())`，使用字面量摘要断言：
 
@@ -362,13 +362,13 @@ it('recovers from malformed persisted state', () => {
 })
 ```
 
-- [ ] **Step 2: 运行测试并确认 store 缺失**
+- [x] **Step 2: 运行测试并确认 store 缺失**
 
 Run: `pnpm exec vitest run src/stores/compare.test.ts`（工作目录 `frontend`）
 
 Expected: FAIL，提示 `./compare` 模块不存在。
 
-- [ ] **Step 3: 添加目录类型、展示版批量函数和 API**
+- [x] **Step 3: 添加目录类型、展示版批量函数和 API**
 
 在 `frontend/src/types/catalog.ts` 添加与后端一致的接口：
 
@@ -414,7 +414,7 @@ export async function getProductComparison(productIds: number[]) {
 
 在 `frontend/src/api/catalog.test.ts` 使用 `vi.resetModules()` 隔离模块级 Map，mock `http.get` 返回完整 `ProductComparisonResult`。同一 ID 组合连续调用两次时断言只请求一次；`vi.setSystemTime()` 前进 30,001ms 后第三次调用断言请求次数变为两次。
 
-- [ ] **Step 4: 实现最小 Pinia store**
+- [x] **Step 4: 实现最小 Pinia store**
 
 持久化结构只保存最小摘要：
 
@@ -510,7 +510,7 @@ export const useCompareStore = defineStore('compare', () => {
 
 `readStoredSelections()` 必须验证数组、整数 ID、整数分类 ID、字符串名称，并过滤重复/超量项；无效 JSON 时删除版本键。`replaceFromProducts()` 使用批量接口真实商品修正分享链接恢复后的摘要。
 
-- [ ] **Step 5: 运行 store 与类型构建测试**
+- [x] **Step 5: 运行 store 与类型构建测试**
 
 Run: `pnpm exec vitest run src/stores/compare.test.ts src/api/catalog.test.ts`（工作目录 `frontend`）
 
@@ -520,7 +520,7 @@ Run: `pnpm typecheck`（工作目录 `frontend`）
 
 Expected: exit 0。
 
-- [ ] **Step 6: 提交前端数据基础**
+- [x] **Step 6: 提交前端数据基础**
 
 ```powershell
 git add frontend/src/types/catalog.ts frontend/src/demo/catalog.ts frontend/src/api/catalog.ts frontend/src/api/catalog.test.ts frontend/src/stores/compare.ts frontend/src/stores/compare.test.ts docs/superpowers/plans/2026-08-24-product-comparison.md

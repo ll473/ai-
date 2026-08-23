@@ -1,5 +1,11 @@
 import { http } from './http'
-import { demoBrands, demoCategories, getDemoProduct, getDemoProducts } from '../demo/catalog'
+import {
+  demoBrands,
+  demoCategories,
+  getDemoProduct,
+  getDemoProductComparison,
+  getDemoProducts,
+} from '../demo/catalog'
 import { demoMode } from '../demo/config'
 import type { ApiResponse, PageData } from '../types/api'
 import type {
@@ -7,11 +13,17 @@ import type {
   CatalogSearchResult,
   Category,
   ProductDetail,
+  ProductComparisonResult,
   ProductQuery,
   ProductSearchQuery,
   ProductSummary,
   SearchSuggestion,
 } from '../types/catalog'
+
+const comparisonCache = new Map<string, {
+  expiresAt: number
+  data: ProductComparisonResult
+}>()
 
 export async function getCategories(admin = false) {
   if (demoMode && !admin) return demoCategories
@@ -99,6 +111,21 @@ export async function getProduct(productId: number, admin = false) {
     : `/catalog/products/${productId}`
   const response = await http.get<ApiResponse<ProductDetail>>(path)
   return response.data.data
+}
+
+export async function getProductComparison(productIds: number[]): Promise<ProductComparisonResult> {
+  const key = productIds.join(',')
+  const cached = comparisonCache.get(key)
+  if (cached && cached.expiresAt > Date.now()) return cached.data
+
+  const data = demoMode
+    ? getDemoProductComparison(productIds)
+    : (await http.get<ApiResponse<ProductComparisonResult>>(
+        '/catalog/products/compare',
+        { params: { ids: key } },
+      )).data.data
+  comparisonCache.set(key, { data, expiresAt: Date.now() + 30_000 })
+  return data
 }
 
 export async function recordProductView(productId: number, source = 'DETAIL') {
