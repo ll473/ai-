@@ -158,3 +158,34 @@ async def test_tool_center_returns_promotion_on_each_sku_only(
     assert "promotion" not in execution.result
     assert execution.result["skus"][0]["promotion"] is None
     assert execution.result["skus"][1]["promotion"]["discount_amount"] == "100.00"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "product_status",
+    [None, ProductStatus.OFF_SALE],
+    ids=["missing", "off-sale"],
+)
+async def test_tool_center_preserves_missing_or_off_sale_business_error(
+    session: AsyncSession,
+    product_status: ProductStatus | None,
+) -> None:
+    if product_status is not None:
+        session.add_all(
+            [
+                Category(id=1, name="测试分类", slug="test"),
+                product(status=product_status),
+            ]
+        )
+        await session.commit()
+    await AiManagementService(session).seed_builtin_tools()
+
+    execution = await ToolCenter(session).execute_by_name(
+        "get_product_price_stock",
+        {"product_id": 1},
+        ToolContext(),
+    )
+
+    assert execution.status == StepStatus.FAILED
+    assert execution.result is None
+    assert execution.error_message == "商品不存在或已下架"

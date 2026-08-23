@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, ValidationError, model_validator
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.core.exceptions import AppError
 from backend.app.models.ai import (
     AgentRun,
     FunctionTool,
@@ -132,6 +133,9 @@ class ToolCenter:
                 raise ValueError("工具 executor 不在后端白名单中")
             async with asyncio.timeout(tool.timeout_seconds):
                 result = await executor(arguments, context)
+        except AppError as exc:
+            status = StepStatus.FAILED
+            error_message = str(exc)
         except (TimeoutError, ValidationError, ValueError) as exc:
             status = StepStatus.FAILED
             error_message = "工具执行超时" if isinstance(exc, TimeoutError) else str(exc)
