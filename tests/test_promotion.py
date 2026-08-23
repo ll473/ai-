@@ -9,7 +9,6 @@ from backend.app.models.enums import PromotionType
 from backend.app.models.trade import Promotion
 from backend.app.services.promotion import PromotionLine, best_order_promotion
 
-
 NOW = datetime.now(UTC)
 
 
