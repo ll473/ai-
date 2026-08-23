@@ -14,6 +14,7 @@ import {
   removeFavorite,
 } from '../../api/trade'
 import StatePanel from '../../components/StatePanel.vue'
+import CopyProductLinkButton from '../../components/catalog/CopyProductLinkButton.vue'
 import { demoMode } from '../../demo/config'
 import { useAuthStore } from '../../stores/auth'
 import type { ProductQuestionResult } from '../../types/ai'
@@ -286,6 +287,7 @@ watch(() => route.params.id, loadProduct)
             >
               {{ favorite ? '已收藏' : '收藏' }}
             </el-button>
+            <CopyProductLinkButton />
           </div>
 
           <div class="purchase-assurance">
@@ -574,7 +576,7 @@ h1 {
 
 .buy-row {
   display: grid;
-  grid-template-columns: auto minmax(150px, 1fr) auto;
+  grid-template-columns: auto minmax(150px, 1fr) auto auto;
   gap: 12px;
 }
 
