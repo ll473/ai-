@@ -4,7 +4,14 @@ from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from backend.app.models.enums import AgentRunStatus, AgentStepType, DocumentStatus, StepStatus
+from backend.app.models.enums import (
+    AgentRunStatus,
+    AgentStepType,
+    ConversationRole,
+    DocumentStatus,
+    QuestionType,
+    StepStatus,
+)
 
 ExecutorKey = Literal[
     "catalog.search_products",
@@ -260,7 +267,10 @@ class ProductKnowledgeSyncRequest(BaseModel):
 
 class ProductQuestionRequest(BaseModel):
     question: str = Field(min_length=2, max_length=2000)
+    question_type: QuestionType = QuestionType.PRODUCT_KNOWLEDGE
     product_id: int | None = Field(default=None, ge=1)
+    order_no: str | None = Field(default=None, min_length=1, max_length=64)
+    conversation_id: int | None = Field(default=None, ge=1)
     top_k: int = Field(default=5, ge=1, le=8)
 
 
@@ -274,7 +284,32 @@ class KnowledgeCitation(BaseModel):
 
 class ProductQuestionResponse(BaseModel):
     answer: str
+    question_type: QuestionType = QuestionType.PRODUCT_KNOWLEDGE
+    conversation_id: int | None = None
     citations: list[KnowledgeCitation]
+
+
+class ConversationMessagePublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    role: ConversationRole
+    content: str
+    question_type: QuestionType | None
+    created_at: datetime
+
+
+class ConversationPublic(BaseModel):
+    id: int
+    title: str | None
+    scene: str
+    last_message_at: datetime | None
+    message_count: int
+    created_at: datetime
+
+
+class ConversationDetail(ConversationPublic):
+    messages: list[ConversationMessagePublic]
 
 
 class ReviewAnalysisGenerateRequest(BaseModel):

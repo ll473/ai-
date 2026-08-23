@@ -5,6 +5,8 @@ from backend.app.models.ai import (
     AgentRun,
     AgentStep,
     AiModelConfig,
+    Conversation,
+    ConversationMessage,
     FunctionTool,
     KnowledgeChunk,
     KnowledgeDocument,
@@ -128,6 +130,49 @@ class AiRepository:
             statement = statement.where(AgentRun.user_id == user_id)
         result = await self.session.execute(statement)
         return result.scalar_one_or_none()
+
+    async def get_conversation(
+        self, conversation_id: int, *, user_id: int | None = None
+    ) -> Conversation | None:
+        statement = select(Conversation).where(Conversation.id == conversation_id)
+        if user_id is not None:
+            statement = statement.where(Conversation.user_id == user_id)
+        return (await self.session.execute(statement)).scalar_one_or_none()
+
+    async def list_conversations(
+        self, user_id: int, *, page: int, page_size: int
+    ) -> tuple[list[tuple[Conversation, int]], int]:
+        base = select(Conversation).where(Conversation.user_id == user_id)
+        total = int(
+            await self.session.scalar(select(func.count()).select_from(base.subquery())) or 0
+        )
+        statement = (
+            select(Conversation, func.count(ConversationMessage.id))
+            .outerjoin(
+                ConversationMessage,
+                ConversationMessage.conversation_id == Conversation.id,
+            )
+            .where(Conversation.user_id == user_id)
+            .group_by(Conversation.id)
+            .order_by(Conversation.last_message_at.desc(), Conversation.id.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        rows = (await self.session.execute(statement)).tuples().all()
+        return [(conversation, int(count)) for conversation, count in rows], total
+
+    async def list_conversation_messages(
+        self, conversation_id: int, *, limit: int = 30
+    ) -> list[ConversationMessage]:
+        statement = (
+            select(ConversationMessage)
+            .where(ConversationMessage.conversation_id == conversation_id)
+            .order_by(ConversationMessage.created_at.desc(), ConversationMessage.id.desc())
+            .limit(limit)
+        )
+        messages = list((await self.session.scalars(statement)).all())
+        messages.reverse()
+        return messages
 
     async def list_agent_runs(
         self, *, page: int, page_size: int, user_id: int | None = None

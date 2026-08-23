@@ -4,11 +4,15 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from backend.app.api.v1.routes.ai import product_question
 from backend.app.core.exceptions import NotFoundError
 from backend.app.models import Base
+from backend.app.models.ai import FunctionTool
 from backend.app.models.catalog import Category, Product, ProductSku
-from backend.app.models.enums import ProductStatus, PromotionType, StepStatus
+from backend.app.models.enums import ProductStatus, PromotionType, QuestionType, StepStatus
 from backend.app.models.trade import Promotion
+from backend.app.models.user import User
+from backend.app.schemas.ai import ProductQuestionRequest
 from backend.app.services.ai_management import AiManagementService
 from backend.app.services.product_price_stock import ProductPriceStockService
 from backend.app.services.tool_center import ToolCenter, ToolContext
@@ -189,3 +193,81 @@ async def test_tool_center_preserves_missing_or_off_sale_business_error(
     assert execution.status == StepStatus.FAILED
     assert execution.result is None
     assert execution.error_message == "商品不存在或已下架"
+
+
+async def seed_consumer_price_stock_data(
+    session: AsyncSession, *, disabled_tool: bool
+) -> User:
+    user = User(
+        id=1,
+        username="price-stock-user",
+        password_hash="test-hash",
+    )
+    session.add_all(
+        [
+            user,
+            Category(id=1, name="测试分类", slug="test"),
+            product(),
+            ProductSku(
+                id=1,
+                product_id=1,
+                sku_no="SKU-STANDARD",
+                name="标准款",
+                attributes={"version": "standard"},
+                price=Decimal("600.00"),
+                stock=10,
+                locked_stock=3,
+                enabled=True,
+            ),
+            fixed_promotion(),
+        ]
+    )
+    if disabled_tool:
+        session.add(
+            FunctionTool(
+                name="get_product_price_stock",
+                display_name="查询商品价格库存",
+                description="禁用状态不应影响消费者问答",
+                input_schema={"type": "object"},
+                executor="catalog.get_product_price_stock",
+                enabled=False,
+            )
+        )
+    await session.commit()
+    return user
+
+
+async def assert_consumer_price_stock_answer(
+    session: AsyncSession, user: User
+) -> None:
+    response = await product_question(
+        ProductQuestionRequest(
+            question="这个商品各规格多少钱，还有库存吗？",
+            question_type=QuestionType.PRICE_STOCK,
+            product_id=1,
+        ),
+        session,
+        user,
+    )
+
+    assert response.data is not None
+    assert "标准款：¥600.00，可售库存 7 件" in response.data.answer
+    assert "优惠" in response.data.answer
+
+
+@pytest.mark.asyncio
+async def test_consumer_price_stock_works_without_function_tool(
+    session: AsyncSession,
+) -> None:
+    user = await seed_consumer_price_stock_data(session, disabled_tool=False)
+
+    await assert_consumer_price_stock_answer(session, user)
+
+
+@pytest.mark.asyncio
+async def test_consumer_price_stock_ignores_disabled_function_tool(
+    session: AsyncSession,
+) -> None:
+    user = await seed_consumer_price_stock_data(session, disabled_tool=True)
+
+    await assert_consumer_price_stock_answer(session, user)
