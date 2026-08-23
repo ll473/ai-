@@ -23,6 +23,7 @@ from backend.app.models.trade import Order
 from backend.app.models.user import Wallet
 from backend.app.repositories.ai import AiRepository
 from backend.app.schemas.ai import ToolExecutionPublic
+from backend.app.services.product_price_stock import ProductPriceStockService
 
 
 class SearchProductsArgs(BaseModel):
@@ -189,30 +190,20 @@ class ToolCenter:
         self, arguments: dict[str, Any], _: ToolContext
     ) -> dict[str, Any]:
         args = ProductPriceStockArgs.model_validate(arguments)
-        product = await self.session.get(Product, args.product_id)
-        if product is None or product.status != ProductStatus.ON_SALE:
-            raise ValueError("商品不存在或已下架")
-        skus = list(
-            (
-                await self.session.scalars(
-                    select(ProductSku)
-                    .where(ProductSku.product_id == product.id, ProductSku.enabled.is_(True))
-                    .order_by(ProductSku.id)
-                )
-            ).all()
-        )
+        result = await ProductPriceStockService(self.session).get(args.product_id)
         return {
-            "product_id": product.id,
-            "product_name": product.name,
+            "product_id": result.product_id,
+            "product_name": result.product_name,
             "skus": [
                 {
-                    "sku_id": sku.id,
-                    "sku_name": sku.name,
-                    "price": str(sku.price),
-                    "available_stock": max(0, sku.stock - sku.locked_stock),
-                    "attributes": sku.attributes,
+                    "sku_id": item.sku_id,
+                    "sku_name": item.sku_name,
+                    "price": str(item.price),
+                    "available_stock": item.available_stock,
+                    "attributes": item.attributes,
+                    "promotion": item.promotion.snapshot if item.promotion else None,
                 }
-                for sku in skus
+                for item in result.skus
             ],
         }
 

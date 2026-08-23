@@ -107,6 +107,14 @@ class CatalogRepository:
         skus = list((await self.session.scalars(sku_statement.order_by(ProductSku.id))).all())
         return images, skus
 
+    async def list_product_skus(
+        self, product_id: int, *, enabled_only: bool = True
+    ) -> list[ProductSku]:
+        statement = select(ProductSku).where(ProductSku.product_id == product_id)
+        if enabled_only:
+            statement = statement.where(ProductSku.enabled.is_(True))
+        return list((await self.session.scalars(statement.order_by(ProductSku.id))).all())
+
     async def get_sku(self, sku_id: int) -> ProductSku | None:
         return await self.session.get(ProductSku, sku_id)
 
