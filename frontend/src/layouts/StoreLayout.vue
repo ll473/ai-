@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import { useAuthStore } from '../stores/auth'
 import { demoMode } from '../demo/config'
+import ProductCompareTray from '../components/catalog/ProductCompareTray.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -109,6 +110,7 @@ function logout() {
         <p>可浏览商城首页、搜索筛选与商品详情；注册、购物车和订单功能需要连接后端服务。</p>
       </div>
       <RouterView />
+      <ProductCompareTray />
     </main>
 
     <footer class="store-footer">

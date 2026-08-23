@@ -1,7 +1,9 @@
 import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia, type Pinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import ProductDetailView from './ProductDetailView.vue'
+import { useCompareStore } from '../../stores/compare'
 
 const mocks = vi.hoisted(() => ({
   errorMessage: vi.fn(),
@@ -73,9 +75,12 @@ const product = {
   }],
 }
 
+let pinia: Pinia
+
 function mountView() {
   return mount(ProductDetailView, {
     global: {
+      plugins: [pinia],
       stubs: {
         ElButton: {
           emits: ['click'],
@@ -86,6 +91,7 @@ function mountView() {
         ElInputNumber: { template: '<input type="number">' },
         ElRate: { template: '<span />' },
         ElSkeleton: { template: '<div><slot /></div>' },
+        RouterLink: { template: '<a><slot /></a>' },
         StatePanel: { template: '<section />' },
       },
     },
@@ -95,6 +101,9 @@ function mountView() {
 describe('ProductDetailView sharing', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
+    pinia = createPinia()
+    setActivePinia(pinia)
     mocks.getProduct.mockResolvedValue(product)
     mocks.getProductReviews.mockResolvedValue({
       items: [],
@@ -129,5 +138,16 @@ describe('ProductDetailView sharing', () => {
     await flushPromises()
 
     expect(mocks.errorMessage).toHaveBeenCalledWith('复制失败，请手动复制地址栏链接')
+  })
+
+  it('adds the loaded product to comparison from the detail page', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.get('button[aria-label="加入商品对比"]').trigger('click')
+
+    expect(useCompareStore().ids).toEqual([42])
+    expect(wrapper.get('button[aria-label="移除商品对比"]').text()).toContain('已加入对比')
+    expect(mocks.push).not.toHaveBeenCalled()
   })
 })

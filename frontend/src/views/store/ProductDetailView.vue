@@ -14,6 +14,7 @@ import {
   removeFavorite,
 } from '../../api/trade'
 import StatePanel from '../../components/StatePanel.vue'
+import CompareToggleButton from '../../components/catalog/CompareToggleButton.vue'
 import CopyProductLinkButton from '../../components/catalog/CopyProductLinkButton.vue'
 import { demoMode } from '../../demo/config'
 import { useAuthStore } from '../../stores/auth'
@@ -287,6 +288,7 @@ watch(() => route.params.id, loadProduct)
             >
               {{ favorite ? '已收藏' : '收藏' }}
             </el-button>
+            <CompareToggleButton :product="product" />
             <CopyProductLinkButton />
           </div>
 

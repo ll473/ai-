@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Picture } from '@element-plus/icons-vue'
 
+import CompareToggleButton from './catalog/CompareToggleButton.vue'
 import type { ProductSummary } from '../types/catalog'
 
 defineProps<{
@@ -16,46 +17,52 @@ const formatPrice = (value: string) => Number(value).toLocaleString('zh-CN', {
 </script>
 
 <template>
-  <RouterLink :to="`/products/${product.id}`" class="product-card focus-ring">
-    <div class="product-card__media">
-      <img
-        v-if="product.main_image_url"
-        :src="product.main_image_url"
-        :alt="product.name"
-        loading="lazy"
-      />
-      <div v-else class="product-card__empty-image">
-        <el-icon :size="30"><Picture /></el-icon>
-        <span>暂无商品图片</span>
+  <article class="product-card">
+    <RouterLink :to="`/products/${product.id}`" class="product-card__link focus-ring">
+      <div class="product-card__media">
+        <img
+          v-if="product.main_image_url"
+          :src="product.main_image_url"
+          :alt="product.name"
+          loading="lazy"
+        />
+        <div v-else class="product-card__empty-image">
+          <el-icon :size="30"><Picture /></el-icon>
+          <span>暂无商品图片</span>
+        </div>
       </div>
-    </div>
-    <div class="product-card__body">
-      <div v-if="product.sales_count > 0 || categoryName" class="product-card__tags">
-        <span v-if="product.sales_count > 0" class="recommend-tag">推荐</span>
-        <span v-if="categoryName">{{ categoryName }}</span>
-      </div>
-      <h3>{{ product.name }}</h3>
-      <p>{{ product.subtitle || '查看商品规格与详细信息' }}</p>
-      <div class="product-card__footer">
-        <div>
-          <span v-if="brandName" class="brand-name">{{ brandName }}</span>
-          <div class="product-card__price">
-            <strong class="tabular"><small>¥</small>{{ formatPrice(product.min_price) }}</strong>
-            <span v-if="product.min_price !== product.max_price">起</span>
+      <div class="product-card__body">
+        <div v-if="product.sales_count > 0 || categoryName" class="product-card__tags">
+          <span v-if="product.sales_count > 0" class="recommend-tag">推荐</span>
+          <span v-if="categoryName">{{ categoryName }}</span>
+        </div>
+        <h3>{{ product.name }}</h3>
+        <p>{{ product.subtitle || '查看商品规格与详细信息' }}</p>
+        <div class="product-card__footer">
+          <div>
+            <span v-if="brandName" class="brand-name">{{ brandName }}</span>
+            <div class="product-card__price">
+              <strong class="tabular"><small>¥</small>{{ formatPrice(product.min_price) }}</strong>
+              <span v-if="product.min_price !== product.max_price">起</span>
+            </div>
+          </div>
+          <div class="product-card__meta">
+            <span v-if="Number(product.rating) > 0"><strong>{{ product.rating }}</strong> 分</span>
+            <span>{{ product.sales_count }} 人买过</span>
           </div>
         </div>
-        <div class="product-card__meta">
-          <span v-if="Number(product.rating) > 0"><strong>{{ product.rating }}</strong> 分</span>
-          <span>{{ product.sales_count }} 人买过</span>
-        </div>
       </div>
+    </RouterLink>
+    <div class="product-card__compare">
+      <CompareToggleButton :product="product" compact />
     </div>
-  </RouterLink>
+  </article>
 </template>
 
 <style scoped>
 .product-card {
   display: flex;
+  position: relative;
   min-width: 0;
   min-height: 100%;
   overflow: hidden;
@@ -64,6 +71,14 @@ const formatPrice = (value: string) => Number(value).toLocaleString('zh-CN', {
   border-radius: var(--radius-container);
   background: var(--color-surface);
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.product-card__link {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  color: inherit;
 }
 
 .product-card:hover {
@@ -166,6 +181,17 @@ p {
   gap: 10px;
   margin-top: auto;
   padding-top: 14px;
+  padding-right: 62px;
+}
+
+.product-card__compare {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+}
+
+.product-card__compare :deep(.compare-toggle-button) {
+  background: var(--color-surface);
 }
 
 .brand-name {
@@ -234,6 +260,7 @@ p {
 
   .product-card__footer {
     padding-top: 10px;
+    padding-right: 58px;
   }
 
   .product-card__price strong {

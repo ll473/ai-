@@ -545,7 +545,7 @@ git commit -m "feat: add local product comparison state"
 - Produces: `CompareToggleButton` props `{ product: ProductSummary; compact?: boolean }`。
 - Produces: `ProductCompareTray` 无 props，全局读取 store。
 
-- [ ] **Step 1: 编写商品卡片和详情入口失败测试**
+- [x] **Step 1: 编写商品卡片和详情入口失败测试**
 
 新增卡片测试，使用真实 Pinia 和 RouterLink stub，点击对比按钮后断言 store 更新且导航未触发：
 
@@ -558,13 +558,13 @@ expect(wrapper.get('button').text()).toContain('已加入对比')
 
 在 `ProductDetailView.test.ts` 增加相同用户可见行为测试，并为 compare store 使用测试 Pinia，不访问 `wrapper.vm`。
 
-- [ ] **Step 2: 运行入口测试并确认按钮缺失**
+- [x] **Step 2: 运行入口测试并确认按钮缺失**
 
 Run: `pnpm exec vitest run src/components/ProductCard.test.ts src/views/store/ProductDetailView.test.ts`（工作目录 `frontend`）
 
 Expected: FAIL，找不到 `aria-label="加入商品对比"`。
 
-- [ ] **Step 3: 实现共用切换按钮并重构商品卡片交互边界**
+- [x] **Step 3: 实现共用切换按钮并重构商品卡片交互边界**
 
 `CompareToggleButton.vue` 通过 store 判断状态：
 
@@ -585,7 +585,7 @@ function toggle() {
 
 将 `ProductCard` 根节点改为 `article.product-card`，商品内容放入单独的 `RouterLink.product-card__link`，对比按钮作为 link 的同级元素，避免按钮嵌套链接和事件冒泡。详情页在收藏操作附近传入已经加载的 `product`。
 
-- [ ] **Step 4: 编写并实现全局对比栏行为**
+- [x] **Step 4: 编写并实现全局对比栏行为**
 
 先新增失败测试或在组件测试中断言：一件商品后出现对比栏；一件时“开始对比”禁用；两件时路由到 `/compare?ids=1,2`；移除和清空更新 store。
 
@@ -601,7 +601,7 @@ function openComparison() {
 
 在 `StoreLayout.vue` 的 `RouterView` 后挂载 `<ProductCompareTray />`。对比页自身不重复显示对比栏，使用 `useRoute()` 在 `route.name === 'product-comparison'` 时隐藏。其他页面使用 `position: fixed`、安全区底部间距和移动端横向缩略列表，不改变 footer 数据流。
 
-- [ ] **Step 5: 运行入口、对比栏和现有商品页测试**
+- [x] **Step 5: 运行入口、对比栏和现有商品页测试**
 
 Run: `pnpm exec vitest run src/components/ProductCard.test.ts src/views/store/ProductDetailView.test.ts src/views/store/ProductListView.test.ts`（工作目录 `frontend`）
 
@@ -611,7 +611,7 @@ Run: `pnpm typecheck`（工作目录 `frontend`）
 
 Expected: exit 0。
 
-- [ ] **Step 6: 提交商品入口和对比栏**
+- [x] **Step 6: 提交商品入口和对比栏**
 
 ```powershell
 git add frontend/src/components/catalog/CompareToggleButton.vue frontend/src/components/catalog/ProductCompareTray.vue frontend/src/components/ProductCard.vue frontend/src/components/ProductCard.test.ts frontend/src/layouts/StoreLayout.vue frontend/src/views/store/ProductDetailView.vue frontend/src/views/store/ProductDetailView.test.ts docs/superpowers/plans/2026-08-24-product-comparison.md
