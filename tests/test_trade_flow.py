@@ -1,3 +1,4 @@
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -5,8 +6,8 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from backend.app.models import Base
 from backend.app.models.catalog import Category, Product, ProductSku
-from backend.app.models.enums import OrderStatus, ProductStatus
-from backend.app.models.trade import CartItem
+from backend.app.models.enums import OrderStatus, ProductStatus, PromotionType
+from backend.app.models.trade import CartItem, Promotion
 from backend.app.models.user import User, UserAddress, Wallet
 from backend.app.schemas.trade import CheckoutRequest, ReviewCreate
 from backend.app.services.trade import TradeService
@@ -114,5 +115,91 @@ async def test_cart_order_wallet_payment_closes_inventory_loop() -> None:
         assert product is not None
         assert product.rating == Decimal("5.00")
         assert product.review_count == 1
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_checkout_applies_global_fixed_promotion_once() -> None:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with session_factory() as session:
+        session.add_all(
+            [
+                User(id=1, username="buyer", password_hash="unused"),
+                UserAddress(
+                    id=1,
+                    user_id=1,
+                    receiver_name="张三",
+                    receiver_phone="13800000000",
+                    province="浙江省",
+                    city="杭州市",
+                    district="西湖区",
+                    detail="测试路 1 号",
+                    is_default=True,
+                ),
+                Category(id=1, name="数码", slug="digital"),
+                Product(
+                    id=1,
+                    category_id=1,
+                    name="测试商品一",
+                    product_no="P001",
+                    min_price=Decimal("60.00"),
+                    max_price=Decimal("60.00"),
+                    status=ProductStatus.ON_SALE,
+                ),
+                Product(
+                    id=2,
+                    category_id=1,
+                    name="测试商品二",
+                    product_no="P002",
+                    min_price=Decimal("60.00"),
+                    max_price=Decimal("60.00"),
+                    status=ProductStatus.ON_SALE,
+                ),
+                ProductSku(
+                    id=1,
+                    product_id=1,
+                    sku_no="SKU001",
+                    name="标准款",
+                    price=Decimal("60.00"),
+                    stock=10,
+                    locked_stock=0,
+                    enabled=True,
+                ),
+                ProductSku(
+                    id=2,
+                    product_id=2,
+                    sku_no="SKU002",
+                    name="标准款",
+                    price=Decimal("60.00"),
+                    stock=10,
+                    locked_stock=0,
+                    enabled=True,
+                ),
+                CartItem(id=1, user_id=1, product_id=1, sku_id=1, quantity=1, selected=True),
+                CartItem(id=2, user_id=1, product_id=2, sku_id=2, quantity=1, selected=True),
+                Promotion(
+                    name="全场立减",
+                    product_id=None,
+                    promotion_type=PromotionType.FIXED,
+                    value=Decimal("20.00"),
+                    minimum_amount=Decimal("0.00"),
+                    starts_at=datetime.now(UTC) - timedelta(days=1),
+                    ends_at=datetime.now(UTC) + timedelta(days=1),
+                    enabled=True,
+                ),
+            ]
+        )
+        await session.commit()
+
+        order = await TradeService(session).create_order(1, CheckoutRequest(address_id=1))
+
+        assert order.product_amount == Decimal("120.00")
+        assert order.discount_amount == Decimal("20.00")
+        assert order.payable_amount == Decimal("100.00")
 
     await engine.dispose()

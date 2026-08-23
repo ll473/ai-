@@ -39,6 +39,7 @@ from backend.app.schemas.trade import (
     WalletPublic,
     WalletTransactionPublic,
 )
+from backend.app.services.promotion import PromotionLine, best_order_promotion
 
 MONEY_STEP = Decimal("0.01")
 
@@ -298,12 +299,13 @@ class TradeService:
         address = await self.trade.get_address(user_id, payload.address_id)
         if address is None:
             raise NotFoundError("收货地址不存在")
-        cart_rows = await self.trade.list_cart_rows(user_id, selected_only=True)
+        cart_rows = await self.trade.list_cart_rows(user_id, selected_only=True, lock=True)
         if not cart_rows:
             raise ConflictError("请先选择要结算的购物车商品")
         sku_map = await self.trade.lock_skus([sku.id for _, _, sku in cart_rows])
 
         product_amount = Decimal("0")
+        promotion_lines: list[PromotionLine] = []
         order_lines: list[tuple[CartItem, Product, ProductSku]] = []
         for cart_item, product, original_sku in cart_rows:
             sku = sku_map.get(original_sku.id)
@@ -316,10 +318,14 @@ class TradeService:
                 or cart_item.quantity > available_stock
             ):
                 raise ConflictError(f"“{product.name} / {sku.name}”已下架或库存不足")
-            product_amount += sku.price * cart_item.quantity
+            line_amount = _money(sku.price * cart_item.quantity)
+            product_amount += line_amount
+            promotion_lines.append(PromotionLine(product_id=product.id, amount=line_amount))
             order_lines.append((cart_item, product, sku))
 
         product_amount = _money(product_amount)
+        promotion_result = await best_order_promotion(self.session, promotion_lines)
+        discount_amount = promotion_result.discount_amount
         order = Order(
             order_no=_business_no("O"),
             user_id=user_id,
@@ -334,7 +340,8 @@ class TradeService:
                 "postal_code": address.postal_code,
             },
             product_amount=product_amount,
-            payable_amount=product_amount,
+            discount_amount=discount_amount,
+            payable_amount=_money(max(Decimal("0"), product_amount - discount_amount)),
             buyer_remark=payload.buyer_remark,
         )
         self.trade.add(order)
