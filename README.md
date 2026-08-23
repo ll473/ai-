@@ -47,6 +47,9 @@ Python + Vue 的前后端分离商城，在完整交易闭环之上提供 RAG、
 - 分类、品牌、商品、SKU、真实价格区间和商品图片上传接口。
 - Alembic 配置、本地建表脚本和基础测试。
 - Vue 3 商城首页、商品列表、商品详情、登录页和管理端商品维护页面。
+- 搜索发现 2.0：自然语言检索、同义词扩展、搜索建议、分类/品牌/价格/库存筛选及分面统计。
+- 商品目录相关度与知识库向量结果通过 RRF 融合排序；外部语义服务超时或返回空结果时自动退回本地检索。
+- 搜索与商品建议点击行为埋点，支持匿名会话及登录用户归因，并对事件字段和商品状态进行服务端校验。
 - 用户收藏、个人中心、AI 导购历史与商品详情收藏状态。
 - 消费者导购页只展示购买需求、推荐理由、实时价格库存和加购入口；运行步骤与工具日志仅在管理端查看。
 - 购物车数量与选中状态、收货地址管理、订单价格快照与库存预占。
@@ -133,6 +136,16 @@ pnpm dev
 - OpenAPI：http://127.0.0.1:8001/docs
 - 健康检查：http://127.0.0.1:8001/health
 
+## 搜索发现 2.0
+
+商品列表页支持输入“适合长时间办公”“送给父母的礼物”等用途描述。后端会先进行关键词规范化和有限的业务同义词扩展，例如“父母”关联“长辈/老人”、“礼物”关联“礼盒/礼品”，再与在售商品、分类和品牌进行匹配。
+
+- 输入暂停 250ms 后返回商品、分类和品牌建议；旧请求不会覆盖较新的输入结果。
+- 支持分类、品牌、价格区间、仅看有货及多种排序方式，筛选统计会保留可切换的其他分类和品牌。
+- 配置向量模型与 Qdrant 后，可将商品目录结果和知识库向量结果进行 RRF 融合；语义服务最多等待 1.5 秒，失败时不影响基础搜索。
+- 相关度排序的候选窗口最多读取 1000 件商品，避免将整个目录加载到应用内存。目录继续扩大时可替换为 Elasticsearch、OpenSearch 或 Meilisearch 等专用搜索服务。
+- 搜索和商品建议点击会写入 `search_events`，用于后续分析零结果词、点击率和推荐质量；埋点失败不会阻塞用户浏览。
+
 ## 接口前缀
 
 - `POST /api/v1/auth/register`
@@ -142,6 +155,9 @@ pnpm dev
 - `GET /api/v1/catalog/categories`
 - `GET /api/v1/catalog/brands`
 - `GET /api/v1/catalog/products`
+- `GET /api/v1/catalog/search/suggestions` 搜索建议
+- `GET /api/v1/catalog/search` 自然语言搜索、筛选、排序与分面统计
+- `POST /api/v1/catalog/search-events` 搜索和商品建议点击埋点
 - `GET /api/v1/catalog/products/{product_id}`
 - `/api/v1/admin/catalog/*` 管理端分类、品牌、商品、SKU 与图片接口
 - `/api/v1/cart/*` 用户购物车接口
@@ -159,6 +175,24 @@ pnpm dev
 - `POST /api/v1/ai/product-qa` 商品知识库 RAG 问答入口
 - `GET /api/v1/ai/runs` 当前用户的导购历史
 - `/api/v1/favorites/*` 用户商品收藏
+
+## 代码检查与测试
+
+后端：
+
+```powershell
+uv run ruff check backend tests
+uv run mypy backend
+uv run pytest -q
+```
+
+前端：
+
+```powershell
+cd frontend
+pnpm test:unit
+pnpm build
+```
 
 ## AI 导购初始化
 
