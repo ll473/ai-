@@ -27,3 +27,4 @@ logs/
 mysql-project.ini
 admin-*-check.png
 .openai/
+.worktrees/
