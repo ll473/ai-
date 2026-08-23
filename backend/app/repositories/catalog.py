@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from decimal import Decimal
+from typing import cast
 
 from sqlalchemy import Select, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +8,8 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from backend.app.models.catalog import Brand, Category, Product, ProductImage, ProductSku
 from backend.app.models.enums import ProductStatus
+
+ComparisonProductRow = tuple[Product, Category, Brand | None]
 
 
 class CatalogRepository:
@@ -393,6 +396,44 @@ class CatalogRepository:
 
     async def get_product(self, product_id: int) -> Product | None:
         return await self.session.get(Product, product_id)
+
+    async def get_products_for_comparison(
+        self, product_ids: Sequence[int]
+    ) -> tuple[list[ComparisonProductRow], list[ProductSku]]:
+        rows = cast(
+            list[ComparisonProductRow],
+            list(
+                (
+                    await self.session.execute(
+                        select(Product, Category, Brand)
+                        .join(Category, Category.id == Product.category_id)
+                        .outerjoin(Brand, Brand.id == Product.brand_id)
+                        .where(
+                            Product.id.in_(product_ids),
+                            Product.status == ProductStatus.ON_SALE,
+                        )
+                    )
+                ).all()
+            ),
+        )
+        found_ids = [product.id for product, _, _ in rows]
+        skus = (
+            list(
+                (
+                    await self.session.scalars(
+                        select(ProductSku)
+                        .where(
+                            ProductSku.product_id.in_(found_ids),
+                            ProductSku.enabled.is_(True),
+                        )
+                        .order_by(ProductSku.product_id, ProductSku.id)
+                    )
+                ).all()
+            )
+            if found_ids
+            else []
+        )
+        return rows, skus
 
     async def get_product_detail_parts(
         self, product_id: int, *, enabled_skus_only: bool

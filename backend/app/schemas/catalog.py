@@ -146,6 +146,21 @@ class SkuPublic(SkuBase):
     created_at: datetime
 
 
+class ProductComparisonItem(ProductSummary):
+    category_name: str
+    brand_name: str | None = None
+    parameters: dict[str, Any] | None = None
+    skus: list[SkuPublic]
+    total_available_stock: int
+
+
+class ProductComparisonResult(BaseModel):
+    items: list[ProductComparisonItem]
+    unavailable_ids: list[int]
+    category_id: int | None = None
+    category_name: str | None = None
+
+
 class ProductImagePublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

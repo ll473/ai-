@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.api.dependencies import get_current_user, get_optional_current_user
 from backend.app.core.database import get_db
-from backend.app.core.exceptions import NotFoundError
+from backend.app.core.exceptions import AppError, NotFoundError
 from backend.app.core.responses import ApiResponse
 from backend.app.models.catalog import ProductViewEvent
 from backend.app.models.user import User
@@ -16,6 +16,7 @@ from backend.app.schemas.catalog import (
     BrandPublic,
     CatalogSearchResult,
     CategoryPublic,
+    ProductComparisonResult,
     ProductDetail,
     ProductSummary,
     ProductViewRequest,
@@ -133,6 +134,22 @@ async def list_products(
         max_price=max_price,
     )
     return ApiResponse(data=data)
+
+
+def _parse_comparison_ids(ids: str) -> list[int]:
+    try:
+        return [int(value.strip()) for value in ids.split(",") if value.strip()]
+    except ValueError as exc:
+        raise AppError("商品对比链接无效", code="COMPARISON_IDS_INVALID", status_code=422) from exc
+
+
+@router.get("/products/compare", response_model=ApiResponse[ProductComparisonResult])
+async def compare_products(
+    session: DbSession,
+    ids: Annotated[str, Query(min_length=3, max_length=100)],
+) -> ApiResponse[ProductComparisonResult]:
+    result = await CatalogService(session).compare_products(_parse_comparison_ids(ids))
+    return ApiResponse(data=result)
 
 
 @router.get("/products/{product_id}", response_model=ApiResponse[ProductDetail])

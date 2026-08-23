@@ -1,10 +1,11 @@
-from collections.abc import Mapping
+from collections import defaultdict
+from collections.abc import Mapping, Sequence
 from decimal import Decimal
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.core.exceptions import ConflictError, NotFoundError
+from backend.app.core.exceptions import AppError, ConflictError, NotFoundError
 from backend.app.models.catalog import Brand, Category, Product, ProductSku
 from backend.app.models.enums import ProductStatus
 from backend.app.repositories.catalog import CatalogRepository
@@ -13,6 +14,8 @@ from backend.app.schemas.catalog import (
     BrandUpdate,
     CategoryCreate,
     CategoryUpdate,
+    ProductComparisonItem,
+    ProductComparisonResult,
     ProductCreate,
     ProductDetail,
     ProductImagePublic,
@@ -40,6 +43,23 @@ def _sku_public(sku: ProductSku) -> SkuPublic:
         locked_stock=sku.locked_stock,
         available_stock=max(0, sku.stock - sku.locked_stock),
         created_at=sku.created_at,
+    )
+
+
+def _comparison_item(
+    product: Product,
+    category: Category,
+    brand: Brand | None,
+    skus: list[ProductSku],
+) -> ProductComparisonItem:
+    public_skus = [_sku_public(sku) for sku in skus]
+    return ProductComparisonItem(
+        **ProductSummary.model_validate(product).model_dump(),
+        category_name=category.name,
+        brand_name=brand.name if brand else None,
+        parameters=product.parameters,
+        skus=public_skus,
+        total_available_stock=sum(sku.available_stock for sku in public_skus),
     )
 
 
@@ -93,6 +113,41 @@ class CatalogService:
             parameters=product.parameters,
             images=[ProductImagePublic.model_validate(image) for image in images],
             skus=[_sku_public(sku) for sku in skus],
+        )
+
+    async def compare_products(self, product_ids: Sequence[int]) -> ProductComparisonResult:
+        ordered_ids = list(dict.fromkeys(product_ids))
+        if not 2 <= len(ordered_ids) <= 4:
+            raise AppError(
+                "请选择 2–4 件商品进行对比",
+                code="COMPARISON_SIZE_INVALID",
+                status_code=422,
+            )
+        rows, skus = await self.catalog.get_products_for_comparison(ordered_ids)
+        row_by_id = {
+            product.id: (product, category, brand) for product, category, brand in rows
+        }
+        categories = {product.category_id for product, _, _ in rows}
+        if len(categories) > 1:
+            raise AppError(
+                "只能对比同一分类商品",
+                code="COMPARISON_CATEGORY_MISMATCH",
+                status_code=422,
+            )
+        skus_by_product: dict[int, list[ProductSku]] = defaultdict(list)
+        for sku in skus:
+            skus_by_product[sku.product_id].append(sku)
+        items = [
+            _comparison_item(*row_by_id[product_id], skus_by_product[product_id])
+            for product_id in ordered_ids
+            if product_id in row_by_id
+        ]
+        unavailable_ids = [product_id for product_id in ordered_ids if product_id not in row_by_id]
+        return ProductComparisonResult(
+            items=items,
+            unavailable_ids=unavailable_ids,
+            category_id=items[0].category_id if items else None,
+            category_name=items[0].category_name if items else None,
         )
 
     async def create_category(self, payload: CategoryCreate) -> Category:

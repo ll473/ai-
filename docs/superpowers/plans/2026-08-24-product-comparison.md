@@ -80,7 +80,7 @@
 - Produces: `GET /api/v1/catalog/products/compare?ids=1,2,3`。
 - Produces: `ProductComparisonItem` 与 `ProductComparisonResult` Pydantic DTO。
 
-- [ ] **Step 1: 编写批量事实服务失败测试**
+- [x] **Step 1: 编写批量事实服务失败测试**
 
 在 `tests/test_product_comparison.py` 建立内存 SQLite 数据，包含两件同分类在售商品、一件跨分类商品、一件下架商品、品牌和启用/禁用 SKU。先写以下核心断言：
 
@@ -151,13 +151,13 @@ async def test_compare_products_rejects_cross_category_candidates() -> None:
     assert captured.value.code == "COMPARISON_CATEGORY_MISMATCH"
 ```
 
-- [ ] **Step 2: 运行测试并确认因接口不存在而失败**
+- [x] **Step 2: 运行测试并确认因接口不存在而失败**
 
 Run: `uv run pytest tests/test_product_comparison.py -q`
 
 Expected: FAIL，错误明确指向 `CatalogService.compare_products` 或对比 DTO 尚不存在，而不是测试数据建表失败。
 
-- [ ] **Step 3: 添加目录 DTO 和固定查询上界的 repository 方法**
+- [x] **Step 3: 添加目录 DTO 和固定查询上界的 repository 方法**
 
 在 `backend/app/schemas/catalog.py` 添加：
 
@@ -200,7 +200,7 @@ async def get_products_for_comparison(
     return rows, skus
 ```
 
-- [ ] **Step 4: 实现服务规则与静态路由**
+- [x] **Step 4: 实现服务规则与静态路由**
 
 在 `CatalogService` 添加：
 
@@ -273,7 +273,7 @@ async def compare_products(
     return ApiResponse(data=await CatalogService(session).compare_products(product_ids))
 ```
 
-- [ ] **Step 5: 添加查询次数和路由顺序回归测试**
+- [x] **Step 5: 添加查询次数和路由顺序回归测试**
 
 在种子数据提交完成后监听 SQLAlchemy `before_cursor_execute`，只统计 `compare_products()` 阶段的 SELECT，并断言恰好两次。再从 `catalog.router.routes` 取路径顺序，断言静态路径先于动态路径：
 
@@ -283,7 +283,7 @@ paths = [route.path for route in catalog_routes.router.routes]
 assert paths.index("/catalog/products/compare") < paths.index("/catalog/products/{product_id}")
 ```
 
-- [ ] **Step 6: 运行目标测试和后端静态检查**
+- [x] **Step 6: 运行目标测试和后端静态检查**
 
 Run: `uv run pytest tests/test_product_comparison.py -q`
 
@@ -293,7 +293,7 @@ Run: `uv run ruff check backend/app/schemas/catalog.py backend/app/repositories/
 
 Expected: exit 0。
 
-- [ ] **Step 7: 提交公开批量接口**
+- [x] **Step 7: 提交公开批量接口**
 
 ```powershell
 git add backend/app/schemas/catalog.py backend/app/repositories/catalog.py backend/app/services/catalog.py backend/app/api/v1/routes/catalog.py tests/test_product_comparison.py docs/superpowers/plans/2026-08-24-product-comparison.md
