@@ -206,4 +206,69 @@ describe('ProductListView', () => {
       }),
     )
   })
+
+  it('clears every filter and shows all products from an empty result', async () => {
+    Object.assign(routerMocks.query, {
+      keyword: '不存在的商品',
+      category_id: '2',
+      brand_id: '3',
+      min_price: '500',
+      max_price: '900',
+      in_stock: 'true',
+      sort: 'price_desc',
+      page: '4',
+    })
+    const wrapper = mount(ProductListView, {
+      global: {
+        stubs: {
+          CatalogSearchBox: { template: '<div />' },
+          ElButton: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
+          ElCheckbox: { template: '<input type="checkbox">' },
+          ElIcon: { template: '<span><slot /></span>' },
+          ElInputNumber: { template: '<input type="number">' },
+          ElOption: { template: '<option />' },
+          ElPagination: { template: '<div />' },
+          ElSelect: { template: '<select><slot /></select>' },
+          ElSkeleton: { template: '<div><slot /></div>' },
+          ElSkeletonItem: { template: '<div />' },
+          ProductCard: { template: '<article />' },
+          StatePanel: {
+            props: ['title', 'description', 'actionLabel'],
+            emits: ['action'],
+            template: `
+              <section>
+                <h3>{{ title }}</h3>
+                <button
+                  v-if="actionLabel"
+                  class="empty-reset"
+                  @click="$emit('action')"
+                >
+                  {{ actionLabel }}
+                </button>
+              </section>
+            `,
+          },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('没有找到符合条件的商品')
+    await wrapper.get('.empty-reset').trigger('click')
+    await flushPromises()
+
+    expect(apiMocks.searchCatalog).toHaveBeenLastCalledWith({
+      page: 1,
+      page_size: 12,
+      keyword: undefined,
+      category_id: undefined,
+      brand_id: undefined,
+      min_price: undefined,
+      max_price: undefined,
+      in_stock: false,
+      sort: 'relevance',
+      semantic: false,
+    })
+    expect(routerMocks.replace).toHaveBeenLastCalledWith({ query: {} })
+  })
 })

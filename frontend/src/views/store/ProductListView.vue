@@ -314,6 +314,8 @@ watch(
       v-else-if="!products.length"
       title="没有找到符合条件的商品"
       description="可缩短关键词、取消部分筛选，或使用用途描述重新搜索。"
+      action-label="清空筛选并查看全部商品"
+      @action="resetFilters"
     />
     <div v-else class="product-grid">
       <ProductCard
