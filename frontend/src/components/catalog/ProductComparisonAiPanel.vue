@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, shallowRef, watch } from 'vue'
+import { computed, onUnmounted, shallowRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { compareProductsWithAi } from '../../api/ai'
@@ -27,15 +27,46 @@ const cacheKey = computed(() => [
   preference.value.trim(),
 ].join(':'))
 
+function isStringList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every(item => typeof item === 'string')
+}
+
+function isProductComparisonAiResult(value: unknown): value is ProductComparisonAiResult {
+  if (!value || typeof value !== 'object') return false
+  const result = value as Record<string, unknown>
+  return Number.isSafeInteger(result.recommended_product_id)
+    && typeof result.summary === 'string'
+    && isStringList(result.considerations)
+    && Array.isArray(result.items)
+    && result.items.every((item) => {
+      if (!item || typeof item !== 'object') return false
+      const comparisonItem = item as Record<string, unknown>
+      return Number.isSafeInteger(comparisonItem.product_id)
+        && isStringList(comparisonItem.strengths)
+        && isStringList(comparisonItem.weaknesses)
+        && isStringList(comparisonItem.suitable_for)
+    })
+}
+
+function isRequestTimeout(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const requestError = error as { code?: unknown; message?: unknown }
+  return requestError.code === 'ECONNABORTED'
+    || requestError.code === 'ETIMEDOUT'
+    || (typeof requestError.message === 'string' && /timeout/i.test(requestError.message))
+}
+
 function readCachedResult(key: string): ProductComparisonAiResult | null {
   const value = sessionStorage.getItem(key)
   if (!value) return null
   try {
-    return JSON.parse(value) as ProductComparisonAiResult
+    const parsed = JSON.parse(value) as unknown
+    if (isProductComparisonAiResult(parsed)) return parsed
   } catch {
-    sessionStorage.removeItem(key)
-    return null
+    // Fall through to clear the corrupt session cache entry.
   }
+  sessionStorage.removeItem(key)
+  return null
 }
 
 const result = shallowRef<ProductComparisonAiResult | null>(readCachedResult(cacheKey.value))
@@ -71,7 +102,9 @@ async function analyze() {
     sessionStorage.setItem(requestKey, JSON.stringify(nextResult))
   } catch (error) {
     if (sequence !== requestSequence || cacheKey.value !== requestKey) return
-    errorMessage.value = error instanceof Error && error.message
+    errorMessage.value = isRequestTimeout(error)
+      ? 'AI 对比分析超时，请稍后重试'
+      : error instanceof Error && error.message
       ? error.message
       : 'AI 对比分析暂时不可用，请稍后重试'
   } finally {
@@ -84,6 +117,10 @@ watch(cacheKey, (key) => {
   loading.value = false
   errorMessage.value = ''
   result.value = readCachedResult(key)
+})
+
+onUnmounted(() => {
+  requestSequence += 1
 })
 </script>
 

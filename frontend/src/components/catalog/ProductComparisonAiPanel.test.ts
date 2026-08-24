@@ -126,6 +126,25 @@ describe('ProductComparisonAiPanel', () => {
     expect(wrapper.text()).toContain('更推荐 EchoArc H1')
   })
 
+  it('removes a structurally invalid JSON cache entry before analyzing again', async () => {
+    mocks.auth.isAuthenticated = true
+    mocks.compareProductsWithAi.mockResolvedValue(result)
+    const key = 'ai-commerce-product-comparison-v1:2,3:'
+    sessionStorage.setItem(key, JSON.stringify({
+      recommended_product_id: 2,
+      summary: '损坏的缓存',
+      items: null,
+      considerations: [],
+    }))
+
+    const wrapper = mountPanel()
+
+    expect(sessionStorage.getItem(key)).toBeNull()
+    await wrapper.get('button').trigger('click')
+    await flushPromises()
+    expect(mocks.compareProductsWithAi).toHaveBeenCalledWith([2, 3], undefined)
+  })
+
   it('does not let a previous product request overwrite the changed comparison', async () => {
     mocks.auth.isAuthenticated = true
     const pending = deferred<ProductComparisonAiResult>()
@@ -138,6 +157,20 @@ describe('ProductComparisonAiPanel', () => {
     await flushPromises()
 
     expect(wrapper.text()).not.toContain('更推荐 EchoArc H1')
+  })
+
+  it('does not save a completed request after the panel unmounts', async () => {
+    mocks.auth.isAuthenticated = true
+    const pending = deferred<ProductComparisonAiResult>()
+    mocks.compareProductsWithAi.mockReturnValue(pending.promise)
+    const wrapper = mountPanel()
+
+    await wrapper.get('button').trigger('click')
+    wrapper.unmount()
+    pending.resolve(result)
+    await flushPromises()
+
+    expect(sessionStorage.getItem('ai-commerce-product-comparison-v1:2,3:')).toBeNull()
   })
 
   it('keeps the preference and allows retry after an analysis failure', async () => {
@@ -157,5 +190,20 @@ describe('ProductComparisonAiPanel', () => {
     await wrapper.get('button').trigger('click')
     await flushPromises()
     expect(mocks.compareProductsWithAi).toHaveBeenCalledTimes(2)
+  })
+
+  it('uses the friendly timeout message for a browser request timeout', async () => {
+    mocks.auth.isAuthenticated = true
+    mocks.compareProductsWithAi.mockRejectedValue(Object.assign(
+      new Error('timeout of 20000ms exceeded'),
+      { code: 'ECONNABORTED' },
+    ))
+    const wrapper = mountPanel()
+
+    await wrapper.get('button').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('AI 对比分析超时，请稍后重试')
+    expect(wrapper.text()).not.toContain('timeout of 20000ms exceeded')
   })
 })
