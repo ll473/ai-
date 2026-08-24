@@ -3,6 +3,7 @@ import { computed, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { getProductComparison } from '../../api/catalog'
+import ProductComparisonAiPanel from '../../components/catalog/ProductComparisonAiPanel.vue'
 import { useCompareStore } from '../../stores/compare'
 import type { ProductComparisonItem } from '../../types/catalog'
 
@@ -237,6 +238,7 @@ watch(() => route.query.ids, value => void loadComparison(value), { immediate: t
         </tbody>
       </table>
     </section>
+    <ProductComparisonAiPanel v-if="products.length >= 2" :products="products" />
   </main>
 </template>
 

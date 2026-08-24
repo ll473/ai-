@@ -158,6 +158,20 @@ export interface ProductQuestionResult {
   citations: KnowledgeCitation[]
 }
 
+export interface ProductComparisonAiItem {
+  product_id: number
+  strengths: string[]
+  weaknesses: string[]
+  suitable_for: string[]
+}
+
+export interface ProductComparisonAiResult {
+  recommended_product_id: number
+  summary: string
+  items: ProductComparisonAiItem[]
+  considerations: string[]
+}
+
 export interface ConversationSummary {
   id: number
   title: string | null

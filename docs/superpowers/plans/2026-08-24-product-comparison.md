@@ -936,7 +936,7 @@ git commit -m "feat: add fast AI product comparison"
 - Produces: `compareProductsWithAi(productIds: number[], preference?: string) -> Promise<ProductComparisonAiResult>`。
 - Produces: `ProductComparisonAiPanel` props `{ products: ProductComparisonItem[] }`，组件从真实商品建立 ID 到名称的映射。
 
-- [ ] **Step 1: 编写登录、展示模式和成功结果失败测试**
+- [x] **Step 1: 编写登录、展示模式和成功结果失败测试**
 
 三条黑盒测试分别断言：
 
@@ -965,17 +965,17 @@ expect(aiMocks.compareProductsWithAi).toHaveBeenCalledWith(
 expect(wrapper.text()).toContain('更推荐 EchoArc H1')
 ```
 
-- [ ] **Step 2: 编写缓存、旧请求和超时恢复失败测试**
+- [x] **Step 2: 编写缓存、旧请求和超时恢复失败测试**
 
 先把成功结果写入 `sessionStorage` 后重新 mount，断言不调用 API 且立即显示。用 deferred Promise 修改 `products` props，断言旧结果不覆盖新组合。mock API reject 后断言需求文本仍存在、基础面板未卸载且“重新分析”按钮可点击。
 
-- [ ] **Step 3: 运行测试并确认组件缺失**
+- [x] **Step 3: 运行测试并确认组件缺失**
 
 Run: `pnpm exec vitest run src/components/catalog/ProductComparisonAiPanel.test.ts`（工作目录 `frontend`）
 
 Expected: FAIL，组件模块不存在。
 
-- [ ] **Step 4: 添加 TypeScript 类型和 API**
+- [x] **Step 4: 添加 TypeScript 类型和 API**
 
 ```ts
 export interface ProductComparisonAiItem {
@@ -1000,7 +1000,7 @@ export async function compareProductsWithAi(productIds: number[], preference?: s
 }
 ```
 
-- [ ] **Step 5: 实现会话缓存与非阻塞面板**
+- [x] **Step 5: 实现会话缓存与非阻塞面板**
 
 缓存键固定包含排序保持不变的 ID 和规范化需求：
 
@@ -1014,7 +1014,7 @@ const cacheKey = computed(() => [
 
 组件用 `computed(() => new Map(props.products.map(product => [product.id, product.name])))` 为逐商品优缺点显示真实名称。展示模式只显示说明；未登录时跳登录；已登录时设置局部 `loading` 并调用 API。请求使用序号校验 props 与需求未变化后才写结果。成功结果写入 `sessionStorage`；JSON 损坏时删除该键。catch 只设置局部错误，不清空输入或触碰父页面事实。
 
-- [ ] **Step 6: 接入对比页并运行目标测试**
+- [x] **Step 6: 接入对比页并运行目标测试**
 
 在基础表格之后添加：
 
@@ -1033,7 +1033,7 @@ Run: `pnpm typecheck`（工作目录 `frontend`）
 
 Expected: exit 0。
 
-- [ ] **Step 7: 提交 AI 对比面板**
+- [x] **Step 7: 提交 AI 对比面板**
 
 ```powershell
 git add frontend/src/types/ai.ts frontend/src/api/ai.ts frontend/src/components/catalog/ProductComparisonAiPanel.vue frontend/src/components/catalog/ProductComparisonAiPanel.test.ts frontend/src/views/store/ProductComparisonView.vue docs/superpowers/plans/2026-08-24-product-comparison.md

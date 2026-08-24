@@ -1,7 +1,7 @@
 import type { PageData } from '../types/api'
 import type {
   AgentRun, ConversationDetail, ConversationSummary, FunctionTool, KnowledgeChunk, KnowledgeDocument, ModelConfig, ProductQuestionResult,
-  OperationReport, OperationsDashboard, PromptTemplate, ReviewAnalysis, ToolCallLog,
+  OperationReport, OperationsDashboard, ProductComparisonAiResult, PromptTemplate, ReviewAnalysis, ToolCallLog,
   ToolExecution,
 } from '../types/ai'
 import { http } from './http'
@@ -153,6 +153,13 @@ export async function askProductQuestion(
     conversation_id: conversationId || null,
     top_k: 5,
   })).data.data as ProductQuestionResult
+}
+
+export async function compareProductsWithAi(productIds: number[], preference?: string) {
+  return (await http.post('/ai/product-comparison', {
+    product_ids: productIds,
+    preference: preference?.trim() || null,
+  }, { timeout: 20_000 })).data.data as ProductComparisonAiResult
 }
 
 export async function getOperationsDashboard(days = 30) {
