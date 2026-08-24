@@ -173,7 +173,23 @@ class ProductComparisonAiService:
             "rating": item.get("rating"),
             "review_count": item.get("review_count"),
             "sales_count": item.get("sales_count"),
-            "sku_names": [sku["name"] for sku in item.get("skus", [])],
+            "min_price": item.get("min_price"),
+            "max_price": item.get("max_price"),
+            "total_available_stock": item.get("total_available_stock"),
+            "skus": [
+                {
+                    "name": sku.get("name"),
+                    "attributes": {
+                        str(key)[:80]: str(value)[:300]
+                        for key, value in sku.get("attributes", {}).items()
+                    }
+                    if isinstance(sku.get("attributes"), dict)
+                    else {},
+                    "price": sku.get("price"),
+                    "available_stock": sku.get("available_stock"),
+                }
+                for sku in item.get("skus", [])
+            ],
         }
 
     @staticmethod

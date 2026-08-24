@@ -21,31 +21,49 @@ let requestSequence = 0
 
 const productIds = computed(() => props.products.map(product => product.id))
 const productNames = computed(() => new Map(props.products.map(product => [product.id, product.name])))
-const cacheKey = computed(() => [
-  'ai-commerce-product-comparison-v1',
-  productIds.value.join(','),
-  preference.value.trim(),
-].join(':'))
+const authenticatedUserId = computed(() => auth.isAuthenticated && Number.isSafeInteger(auth.user?.id)
+  ? auth.user.id
+  : null)
+const cacheKey = computed<string | null>(() => {
+  if (authenticatedUserId.value === null) return null
+  return [
+    'ai-commerce-product-comparison-v1',
+    authenticatedUserId.value,
+    productIds.value.join(','),
+    preference.value.trim(),
+  ].join(':')
+})
 
 function isStringList(value: unknown): value is string[] {
   return Array.isArray(value) && value.every(item => typeof item === 'string')
 }
 
-function isProductComparisonAiResult(value: unknown): value is ProductComparisonAiResult {
+function isProductComparisonAiResult(
+  value: unknown,
+  candidateIds: readonly number[],
+): value is ProductComparisonAiResult {
   if (!value || typeof value !== 'object') return false
   const result = value as Record<string, unknown>
-  return Number.isSafeInteger(result.recommended_product_id)
-    && typeof result.summary === 'string'
-    && isStringList(result.considerations)
-    && Array.isArray(result.items)
-    && result.items.every((item) => {
-      if (!item || typeof item !== 'object') return false
-      const comparisonItem = item as Record<string, unknown>
-      return Number.isSafeInteger(comparisonItem.product_id)
-        && isStringList(comparisonItem.strengths)
-        && isStringList(comparisonItem.weaknesses)
-        && isStringList(comparisonItem.suitable_for)
-    })
+  const candidateIdSet = new Set(candidateIds)
+  if (!candidateIds.length || new Set(candidateIds).size !== candidateIds.length) return false
+  if (!Number.isSafeInteger(result.recommended_product_id)
+    || !candidateIdSet.has(result.recommended_product_id)
+    || typeof result.summary !== 'string'
+    || !isStringList(result.considerations)
+    || !Array.isArray(result.items)
+    || result.items.length !== candidateIds.length) return false
+  const itemIds: number[] = []
+  for (const item of result.items) {
+    if (!item || typeof item !== 'object') return false
+    const comparisonItem = item as Record<string, unknown>
+    if (!Number.isSafeInteger(comparisonItem.product_id)
+      || !isStringList(comparisonItem.strengths)
+      || !isStringList(comparisonItem.weaknesses)
+      || !isStringList(comparisonItem.suitable_for)) return false
+    itemIds.push(comparisonItem.product_id)
+  }
+  return new Set(itemIds).size === candidateIds.length
+    && itemIds.every(itemId => candidateIdSet.has(itemId))
 }
 
 function isRequestTimeout(error: unknown): boolean {
@@ -56,12 +74,13 @@ function isRequestTimeout(error: unknown): boolean {
     || (typeof requestError.message === 'string' && /timeout/i.test(requestError.message))
 }
 
-function readCachedResult(key: string): ProductComparisonAiResult | null {
+function readCachedResult(key: string | null): ProductComparisonAiResult | null {
+  if (!key) return null
   const value = sessionStorage.getItem(key)
   if (!value) return null
   try {
     const parsed = JSON.parse(value) as unknown
-    if (isProductComparisonAiResult(parsed)) return parsed
+    if (isProductComparisonAiResult(parsed, productIds.value)) return parsed
   } catch {
     // Fall through to clear the corrupt session cache entry.
   }
@@ -69,7 +88,9 @@ function readCachedResult(key: string): ProductComparisonAiResult | null {
   return null
 }
 
-const result = shallowRef<ProductComparisonAiResult | null>(readCachedResult(cacheKey.value))
+const result = shallowRef<ProductComparisonAiResult | null>(
+  authenticatedUserId.value === null ? null : readCachedResult(cacheKey.value),
+)
 
 const recommendedProductName = computed(() => result.value
   ? productNames.value.get(result.value.recommended_product_id) || '当前对比商品'
@@ -84,12 +105,13 @@ function redirectToLogin() {
 
 async function analyze() {
   if (demoMode) return
-  if (!auth.isAuthenticated) {
+  if (authenticatedUserId.value === null) {
     redirectToLogin()
     return
   }
 
   const requestKey = cacheKey.value
+  if (!requestKey) return
   const requestIds = [...productIds.value]
   const requestPreference = preference.value.trim()
   const sequence = ++requestSequence
@@ -98,6 +120,10 @@ async function analyze() {
   try {
     const nextResult = await compareProductsWithAi(requestIds, requestPreference || undefined)
     if (sequence !== requestSequence || cacheKey.value !== requestKey) return
+    if (!isProductComparisonAiResult(nextResult, requestIds)) {
+      errorMessage.value = 'AI 对比分析结果无效，请稍后重试'
+      return
+    }
     result.value = nextResult
     sessionStorage.setItem(requestKey, JSON.stringify(nextResult))
   } catch (error) {
@@ -116,7 +142,7 @@ watch(cacheKey, (key) => {
   requestSequence += 1
   loading.value = false
   errorMessage.value = ''
-  result.value = readCachedResult(key)
+  result.value = authenticatedUserId.value === null ? null : readCachedResult(key)
 })
 
 onUnmounted(() => {

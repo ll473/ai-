@@ -146,11 +146,20 @@ class SkuPublic(SkuBase):
     created_at: datetime
 
 
+class ProductComparisonSku(BaseModel):
+    """SKU facts that are safe and useful in the public comparison table."""
+
+    name: str
+    attributes: dict[str, Any] | None = None
+    price: Decimal
+    available_stock: int
+
+
 class ProductComparisonItem(ProductSummary):
     category_name: str
     brand_name: str | None = None
     parameters: dict[str, Any] | None = None
-    skus: list[SkuPublic]
+    skus: list[ProductComparisonSku]
     total_available_stock: int
 
 

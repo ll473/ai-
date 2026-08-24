@@ -74,8 +74,15 @@ export interface ProductComparisonItem extends ProductSummary {
   category_name: string
   brand_name: string | null
   parameters: Record<string, unknown> | null
-  skus: ProductSku[]
+  skus: ProductComparisonSku[]
   total_available_stock: number
+}
+
+export interface ProductComparisonSku {
+  name: string
+  attributes: Record<string, unknown> | null
+  price: string
+  available_stock: number
 }
 
 export interface ProductComparisonResult {

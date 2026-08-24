@@ -8,7 +8,7 @@ import type { ProductComparisonItem } from '../../types/catalog'
 const mocks = vi.hoisted(() => ({
   compareProductsWithAi: vi.fn(),
   routerPush: vi.fn(),
-  auth: { isAuthenticated: false },
+  auth: { isAuthenticated: false, user: null as { id: number } | null },
   demo: { enabled: false },
 }))
 
@@ -78,6 +78,7 @@ describe('ProductComparisonAiPanel', () => {
   beforeEach(() => {
     sessionStorage.clear()
     mocks.auth.isAuthenticated = false
+    mocks.auth.user = null
     mocks.demo.enabled = false
     mocks.routerPush.mockReset()
     mocks.compareProductsWithAi.mockReset()
@@ -106,6 +107,7 @@ describe('ProductComparisonAiPanel', () => {
 
   it('sends a trimmed preference on demand and renders the named recommendation', async () => {
     mocks.auth.isAuthenticated = true
+    mocks.auth.user = { id: 7 }
     mocks.compareProductsWithAi.mockResolvedValue(result)
     const wrapper = mountPanel()
 
@@ -118,7 +120,9 @@ describe('ProductComparisonAiPanel', () => {
   })
 
   it('restores a valid session result for the exact ordered products and preference', () => {
-    sessionStorage.setItem('ai-commerce-product-comparison-v1:2,3:', JSON.stringify(result))
+    mocks.auth.isAuthenticated = true
+    mocks.auth.user = { id: 7 }
+    sessionStorage.setItem('ai-commerce-product-comparison-v1:7:2,3:', JSON.stringify(result))
 
     const wrapper = mountPanel()
 
@@ -128,8 +132,9 @@ describe('ProductComparisonAiPanel', () => {
 
   it('removes a structurally invalid JSON cache entry before analyzing again', async () => {
     mocks.auth.isAuthenticated = true
+    mocks.auth.user = { id: 7 }
     mocks.compareProductsWithAi.mockResolvedValue(result)
-    const key = 'ai-commerce-product-comparison-v1:2,3:'
+    const key = 'ai-commerce-product-comparison-v1:7:2,3:'
     sessionStorage.setItem(key, JSON.stringify({
       recommended_product_id: 2,
       summary: '损坏的缓存',
@@ -147,6 +152,7 @@ describe('ProductComparisonAiPanel', () => {
 
   it('does not let a previous product request overwrite the changed comparison', async () => {
     mocks.auth.isAuthenticated = true
+    mocks.auth.user = { id: 7 }
     const pending = deferred<ProductComparisonAiResult>()
     mocks.compareProductsWithAi.mockReturnValue(pending.promise)
     const wrapper = mountPanel()
@@ -161,6 +167,7 @@ describe('ProductComparisonAiPanel', () => {
 
   it('does not save a completed request after the panel unmounts', async () => {
     mocks.auth.isAuthenticated = true
+    mocks.auth.user = { id: 7 }
     const pending = deferred<ProductComparisonAiResult>()
     mocks.compareProductsWithAi.mockReturnValue(pending.promise)
     const wrapper = mountPanel()
@@ -170,11 +177,12 @@ describe('ProductComparisonAiPanel', () => {
     pending.resolve(result)
     await flushPromises()
 
-    expect(sessionStorage.getItem('ai-commerce-product-comparison-v1:2,3:')).toBeNull()
+    expect(sessionStorage.getItem('ai-commerce-product-comparison-v1:7:2,3:')).toBeNull()
   })
 
   it('keeps the preference and allows retry after an analysis failure', async () => {
     mocks.auth.isAuthenticated = true
+    mocks.auth.user = { id: 7 }
     mocks.compareProductsWithAi
       .mockRejectedValueOnce(new Error('AI 对比分析超时，请稍后重试'))
       .mockResolvedValueOnce(result)
@@ -194,6 +202,7 @@ describe('ProductComparisonAiPanel', () => {
 
   it('uses the friendly timeout message for a browser request timeout', async () => {
     mocks.auth.isAuthenticated = true
+    mocks.auth.user = { id: 7 }
     mocks.compareProductsWithAi.mockRejectedValue(Object.assign(
       new Error('timeout of 20000ms exceeded'),
       { code: 'ECONNABORTED' },
@@ -205,5 +214,50 @@ describe('ProductComparisonAiPanel', () => {
 
     expect(wrapper.text()).toContain('AI 对比分析超时，请稍后重试')
     expect(wrapper.text()).not.toContain('timeout of 20000ms exceeded')
+  })
+
+  it('does not read an AI cache before login or after a different user signs in', () => {
+    sessionStorage.setItem('ai-commerce-product-comparison-v1:7:2,3:', JSON.stringify(result))
+
+    const guest = mountPanel()
+    expect(guest.text()).not.toContain('更推荐 EchoArc H1')
+    guest.unmount()
+
+    mocks.auth.isAuthenticated = true
+    mocks.auth.user = { id: 8 }
+    const otherUser = mountPanel()
+    expect(otherUser.text()).not.toContain('更推荐 EchoArc H1')
+  })
+
+  it('rejects cache results with an unknown recommendation, missing candidate, or duplicate item', () => {
+    mocks.auth.isAuthenticated = true
+    mocks.auth.user = { id: 7 }
+    const invalidResults = [
+      { ...result, recommended_product_id: 99 },
+      { ...result, items: [result.items[0]] },
+      { ...result, items: [result.items[0], result.items[0]] },
+    ]
+
+    for (const invalid of invalidResults) {
+      sessionStorage.setItem('ai-commerce-product-comparison-v1:7:2,3:', JSON.stringify(invalid))
+      const wrapper = mountPanel()
+      expect(wrapper.text()).not.toContain('更推荐 EchoArc H1')
+      wrapper.unmount()
+    }
+    expect(sessionStorage.getItem('ai-commerce-product-comparison-v1:7:2,3:')).toBeNull()
+  })
+
+  it('keeps the panel usable and does not cache an invalid network response', async () => {
+    mocks.auth.isAuthenticated = true
+    mocks.auth.user = { id: 7 }
+    mocks.compareProductsWithAi.mockResolvedValue({ ...result, recommended_product_id: 99 })
+    const wrapper = mountPanel()
+
+    await wrapper.get('button').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('textarea').exists()).toBe(true)
+    expect(wrapper.text()).toContain('AI 对比分析结果无效，请稍后重试')
+    expect(sessionStorage.getItem('ai-commerce-product-comparison-v1:7:2,3:')).toBeNull()
   })
 })

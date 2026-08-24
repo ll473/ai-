@@ -41,6 +41,8 @@ async def seeded_session() -> AsyncIterator[AsyncSession]:
                         category_id=10,
                         name="耳机 A",
                         product_no="A-1",
+                        min_price=599,
+                        max_price=599,
                         detail_markdown="不应发送给模型的商品详情",
                         parameters={"降噪": "自适应", "续航": "30 小时"},
                         status=ProductStatus.ON_SALE,
@@ -50,6 +52,8 @@ async def seeded_session() -> AsyncIterator[AsyncSession]:
                         category_id=10,
                         name="耳机 B",
                         product_no="B-2",
+                        min_price=899,
+                        max_price=899,
                         parameters={"降噪": "混合", "续航": "35 小时"},
                         status=ProductStatus.ON_SALE,
                     ),
@@ -72,6 +76,7 @@ async def seeded_session() -> AsyncIterator[AsyncSession]:
                         product_id=1,
                         sku_no="A-1-S",
                         name="标准版",
+                        attributes={"配色": "黑色", "版本": 2},
                         price=599,
                         stock=5,
                         locked_stock=1,
@@ -82,6 +87,7 @@ async def seeded_session() -> AsyncIterator[AsyncSession]:
                         product_id=2,
                         sku_no="B-2-S",
                         name="标准版",
+                        attributes={"配色": "黑色", "版本": 2},
                         price=899,
                         stock=9,
                         locked_stock=2,
@@ -158,8 +164,18 @@ async def test_ai_comparison_uses_server_facts_once_in_requested_order() -> None
     assert [fact["product_id"] for fact in gateway.facts] == [2, 1]
     assert gateway.preference == "通勤使用"
     assert "detail_markdown" not in gateway.facts[0]
-    assert "price" not in gateway.facts[0]
-    assert "total_available_stock" not in gateway.facts[0]
+    assert gateway.facts[0]["min_price"] == "899.00"
+    assert gateway.facts[0]["max_price"] == "899.00"
+    assert gateway.facts[0]["total_available_stock"] == 7
+    assert gateway.facts[0]["skus"] == [{
+        "name": "标准版",
+        "attributes": {"配色": "黑色", "版本": "2"},
+        "price": "899.00",
+        "available_stock": 7,
+    }]
+    assert "detail_markdown" not in gateway.facts[0]
+    assert "locked_stock" not in gateway.facts[0]
+    assert "stock" not in gateway.facts[0]
     assert result.recommended_product_id == 2
 
 

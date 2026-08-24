@@ -81,12 +81,22 @@ const skuAttributeRows = computed(() => buildRows(
   'sku:',
 ))
 
+const fixedRows = computed<ComparisonRow[]>(() => [
+  { key: 'brand', label: '品牌', values: products.value.map(product => product.brand_name || '未提供'), different: false },
+  { key: 'price', label: '价格区间', values: products.value.map(formatPriceRange), different: false },
+  { key: 'rating', label: '评分', values: products.value.map(product => `${Number(product.rating).toFixed(1)} 分`), different: false },
+  { key: 'review_count', label: '评价数', values: products.value.map(product => `${product.review_count} 条`), different: false },
+  { key: 'sales_count', label: '销量', values: products.value.map(product => `${product.sales_count} 件`), different: false },
+  { key: 'total_available_stock', label: '总可售库存', values: products.value.map(product => `${product.total_available_stock} 件`), different: false },
+].map(row => ({ ...row, different: new Set(row.values).size > 1 })))
+
 const visibleRows = computed(() => {
-  const rows = [...parameterRows.value, ...skuAttributeRows.value]
+  const rows = [...fixedRows.value, ...parameterRows.value, ...skuAttributeRows.value]
   return differencesOnly.value ? rows.filter(row => row.different) : rows
 })
 
 const hasEnoughProducts = computed(() => products.value.length >= 2)
+const hasDetailedParameters = computed(() => parameterRows.value.length > 0 || skuAttributeRows.value.length > 0)
 
 function isCanonicalRouteValue(value: unknown, ids: number[]) {
   const canonicalIds = ids.join(',')
@@ -106,19 +116,23 @@ async function replaceWithResolvedIds(ids: number[]) {
 
 async function loadComparison(value: unknown) {
   const requestedIds = normalizeProductIds(value)
-  const sequence = ++requestSequence
   const requestedIdsText = requestedIds.join(',')
   const isInternalCanonicalReload = internalCanonicalIds === requestedIdsText
     && isCanonicalRouteValue(value, requestedIds)
-  if (isInternalCanonicalReload) internalCanonicalIds = null
+  if (isInternalCanonicalReload) {
+    internalCanonicalIds = null
+    return
+  }
+  const sequence = ++requestSequence
   loadError.value = ''
-  if (!isInternalCanonicalReload) unavailableIds.value = []
+  unavailableIds.value = []
 
   if (requestedIds.length < 2) {
-    products.value = []
-    compare.clear()
+    if (!requestedIds.length) {
+      products.value = []
+      compare.clear()
+    }
     loading.value = false
-    await replaceWithResolvedIds(requestedIds)
     return
   }
 
@@ -127,9 +141,7 @@ async function loadComparison(value: unknown) {
     const result = await getProductComparison(requestedIds)
     if (sequence !== requestSequence) return
     products.value = result.items
-    unavailableIds.value = isInternalCanonicalReload
-      ? [...new Set([...unavailableIds.value, ...result.unavailable_ids])]
-      : result.unavailable_ids
+    unavailableIds.value = result.unavailable_ids
     compare.replaceFromProducts(result.items)
     await replaceWithResolvedIds(result.items.map(product => product.id))
   } catch (cause) {
@@ -149,6 +161,7 @@ async function removeProduct(productId: number) {
   products.value = products.value.filter(product => product.id !== productId)
   unavailableIds.value = unavailableIds.value.filter(id => id !== productId)
   compare.remove(productId)
+  internalCanonicalIds = compare.ids.join(',')
   await router.replace({
     path: '/compare',
     query: compare.ids.length ? { ids: compare.ids.join(',') } : {},
@@ -184,6 +197,7 @@ watch(() => route.query.ids, value => void loadComparison(value), { immediate: t
     <section v-else-if="!hasEnoughProducts" class="comparison-state">
       <h2>请选择至少两件同分类商品</h2>
       <p>从商品列表或详情页加入对比，即可在这里查看差异。</p>
+      <p v-if="products.length">当前保留：{{ products.map(product => product.name).join('、') }}</p>
       <RouterLink class="browse-link" to="/products">返回商品列表</RouterLink>
     </section>
     <section v-else class="comparison-table-wrap" aria-label="商品对比表">
@@ -207,33 +221,13 @@ watch(() => route.query.ids, value => void loadComparison(value), { immediate: t
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <th class="comparison-table__label" scope="row">品牌</th>
-            <td v-for="product in products" :key="product.id">{{ product.brand_name || '未提供' }}</td>
-          </tr>
-          <tr>
-            <th class="comparison-table__label" scope="row">价格区间</th>
-            <td v-for="product in products" :key="product.id" class="price-value">{{ formatPriceRange(product) }}</td>
-          </tr>
-          <tr>
-            <th class="comparison-table__label" scope="row">评分</th>
-            <td v-for="product in products" :key="product.id">{{ Number(product.rating).toFixed(1) }} 分</td>
-          </tr>
-          <tr>
-            <th class="comparison-table__label" scope="row">评价数</th>
-            <td v-for="product in products" :key="product.id">{{ product.review_count }} 条</td>
-          </tr>
-          <tr>
-            <th class="comparison-table__label" scope="row">销量</th>
-            <td v-for="product in products" :key="product.id">{{ product.sales_count }} 件</td>
-          </tr>
-          <tr>
-            <th class="comparison-table__label" scope="row">总可售库存</th>
-            <td v-for="product in products" :key="product.id">{{ product.total_available_stock }} 件</td>
-          </tr>
           <tr v-for="row in visibleRows" :key="row.key" :data-parameter="row.label">
             <th class="comparison-table__label" scope="row">{{ row.label }}</th>
-            <td v-for="(value, index) in row.values" :key="products[index]?.id">{{ value }}</td>
+            <td v-for="(value, index) in row.values" :key="products[index]?.id" :class="{ 'price-value': row.key === 'price' }">{{ value }}</td>
+          </tr>
+          <tr v-if="!hasDetailedParameters && !differencesOnly" data-parameter-notice>
+            <th class="comparison-table__label" scope="row">详细参数</th>
+            <td :colspan="products.length">商家暂未提供详细参数</td>
           </tr>
         </tbody>
       </table>

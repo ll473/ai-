@@ -105,7 +105,24 @@ async def test_compare_products_preserves_order_and_marks_unavailable() -> None:
     assert result.items[0].category_name == "数码影音"
     assert result.items[0].brand_name == "EchoArc"
     assert result.items[0].total_available_stock == 7
-    assert all(sku.enabled for item in result.items for sku in item.skus)
+    assert len(result.items[0].skus) == 1
+    assert result.items[0].skus[0].name == "标准版"
+
+
+@pytest.mark.asyncio
+async def test_compare_products_public_json_excludes_internal_sku_fields() -> None:
+    """Public comparison JSON exposes only comparison-safe SKU facts."""
+    async with seeded_session() as session:
+        result = await CatalogService(session).compare_products([1, 2])
+
+    sku = result.model_dump(mode="json")["items"][0]["skus"][0]
+    assert sku == {
+        "name": "标准版",
+        "attributes": None,
+        "price": "599.00",
+        "available_stock": 4,
+    }
+    assert {"stock", "locked_stock", "sku_no", "created_at"}.isdisjoint(sku)
 
 
 @pytest.mark.asyncio

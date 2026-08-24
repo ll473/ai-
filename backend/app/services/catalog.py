@@ -16,6 +16,7 @@ from backend.app.schemas.catalog import (
     CategoryUpdate,
     ProductComparisonItem,
     ProductComparisonResult,
+    ProductComparisonSku,
     ProductCreate,
     ProductDetail,
     ProductImagePublic,
@@ -52,14 +53,22 @@ def _comparison_item(
     brand: Brand | None,
     skus: list[ProductSku],
 ) -> ProductComparisonItem:
-    public_skus = [_sku_public(sku) for sku in skus]
+    comparison_skus = [
+        ProductComparisonSku(
+            name=sku.name,
+            attributes=sku.attributes,
+            price=sku.price,
+            available_stock=max(0, sku.stock - sku.locked_stock),
+        )
+        for sku in skus
+    ]
     return ProductComparisonItem(
         **ProductSummary.model_validate(product).model_dump(),
         category_name=category.name,
         brand_name=brand.name if brand else None,
         parameters=product.parameters,
-        skus=public_skus,
-        total_available_stock=sum(sku.available_stock for sku in public_skus),
+        skus=comparison_skus,
+        total_available_stock=sum(sku.available_stock for sku in comparison_skus),
     )
 
 
