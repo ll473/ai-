@@ -66,6 +66,7 @@ Python + Vue 的前后端分离商城，在完整交易闭环之上提供 RAG、
 - 推荐候选商品/SKU 二次校验、真实价格库存快照、幂等落库与导购结果一键加购。
 - AI 评价分析：只读取周期内前台可见的真实评价，结构化输出好评关键词、差评原因、售后风险、详情缺失与优化建议。
 - AI 运营增长报告：后端聚合成交、评价、导购、推荐与商品排行并固化指标快照，Qwen 生成 Markdown 报告供后台预览和历史复盘。
+- 商品对比中心：可在商品列表和详情页选择同分类商品，查看基础事实对比，并按需获取 AI 取舍建议。
 
 ## 环境要求
 
@@ -149,6 +150,15 @@ pnpm dev
 - 相关度排序的候选窗口最多读取 1000 件商品，避免将整个目录加载到应用内存。目录继续扩大时可替换为 Elasticsearch、OpenSearch 或 Meilisearch 等专用搜索服务。
 - 搜索和商品建议点击会写入 `search_events`，用于后续分析零结果词、点击率和推荐质量；埋点失败不会阻塞用户浏览。
 
+## 商品对比中心
+
+- 商品列表和详情页可将最多 4 件同分类商品加入对比。
+- 对比清单保存在当前浏览器，对比页链接可直接复制分享。
+- 基础表格展示当前价格、可售库存、评分与规格，并支持仅看差异。
+- 基础对比无需登录；“AI 帮我选”需要登录和可用的默认语言模型。
+- AI 采用单次非思考请求，失败或超时不会影响基础表格。
+- GitHub Pages 展示版使用本地演示目录，保留基础对比；AI 对比在展示版不可用。
+
 ## 接口前缀
 
 - `POST /api/v1/auth/register`
@@ -158,6 +168,7 @@ pnpm dev
 - `GET /api/v1/catalog/categories`
 - `GET /api/v1/catalog/brands`
 - `GET /api/v1/catalog/products`
+- `GET /api/v1/catalog/products/compare?ids=1,2` 批量商品对比事实
 - `GET /api/v1/catalog/search/suggestions` 搜索建议
 - `GET /api/v1/catalog/search` 自然语言搜索、筛选、排序与分面统计
 - `POST /api/v1/catalog/search-events` 搜索和商品建议点击埋点
@@ -176,6 +187,7 @@ pnpm dev
 - `/api/v1/admin/operations/*` 运营指标、评价分析与增长报告接口
 - `POST /api/v1/ai/shopping-guide` AI 自主导购入口
 - `POST /api/v1/ai/product-qa` 商品知识库 RAG 问答入口
+- `POST /api/v1/ai/product-comparison` 登录后的单次 AI 商品对比
 - `GET /api/v1/ai/runs` 当前用户的导购历史
 - `/api/v1/favorites/*` 用户商品收藏
 

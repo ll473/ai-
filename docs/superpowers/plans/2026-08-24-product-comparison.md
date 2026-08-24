@@ -1052,7 +1052,7 @@ git commit -m "feat: add on-demand AI comparison panel"
 - Consumes: Tasks 1–6 的完整功能。
 - Produces: 用户文档、全部验证证据和完成状态。
 
-- [ ] **Step 1: 更新 README**
+- [x] **Step 1: 更新 README**
 
 在“当前进度”加入商品对比中心，并新增简短小节，明确：
 
@@ -1068,7 +1068,7 @@ git commit -m "feat: add on-demand AI comparison panel"
 
 在接口前缀补充批量目录和 AI 对比接口。
 
-- [ ] **Step 2: 运行后端完整验证**
+- [x] **Step 2: 运行后端完整验证**
 
 Run: `uv run ruff check backend tests`
 
@@ -1082,7 +1082,7 @@ Run: `uv run pytest -q`
 
 Expected: 0 failed。
 
-- [ ] **Step 3: 运行前端完整验证**
+- [x] **Step 3: 运行前端完整验证**
 
 Run: `pnpm test:unit`（工作目录 `frontend`）
 
@@ -1096,7 +1096,7 @@ Run: `pnpm build:pages`（工作目录 `frontend`）
 
 Expected: exit 0，并确认展示版对比使用本地目录；已有包体积警告允许保留。
 
-- [ ] **Step 4: 浏览器验收核心路径**
+- [x] **Step 4: 浏览器验收核心路径**
 
 启动本地前后端后验证：
 
@@ -1113,7 +1113,7 @@ Expected: exit 0，并确认展示版对比使用本地目录；已有包体积�
 
 移动视口验证参数名列可见、商品列横向滚动且操作按钮可达。
 
-- [ ] **Step 5: 检查性能与差异范围**
+- [x] **Step 5: 检查性能与差异范围**
 
 使用后端测试中的 SQL 查询计数证明批量事实读取固定为两次 SELECT；记录本地批量接口耗时并确认低于 500ms。然后运行：
 
@@ -1125,7 +1125,7 @@ Run: `git status --short`
 
 Expected: 只包含 README、当前计划复选框，以及明确属于本功能的文件；`.github/` 和根目录微信图片保持未跟踪且不暂存。
 
-- [ ] **Step 6: 标记计划完成并提交文档**
+- [x] **Step 6: 标记计划完成并提交文档**
 
 将本计划所有复选框改为 `[x]`，并提交最后文档：
 
