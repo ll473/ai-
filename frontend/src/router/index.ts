@@ -15,6 +15,7 @@ const router = createRouter({
         { path: '', name: 'home', component: HomeView },
         { path: 'products', name: 'products', component: () => import('../views/store/ProductListView.vue') },
         { path: 'products/:id', name: 'product-detail', component: () => import('../views/store/ProductDetailView.vue') },
+        { path: 'compare', name: 'product-comparison', component: () => import('../views/store/ProductComparisonView.vue') },
         { path: 'cart', name: 'cart', meta: { requiresAuth: true }, component: () => import('../views/store/CartView.vue') },
         { path: 'favorites', name: 'favorites', meta: { requiresAuth: true }, component: () => import('../views/store/FavoritesView.vue') },
         { path: 'orders', name: 'orders', meta: { requiresAuth: true }, component: () => import('../views/store/OrdersView.vue') },

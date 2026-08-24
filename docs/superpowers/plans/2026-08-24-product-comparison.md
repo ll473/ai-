@@ -631,7 +631,7 @@ git commit -m "feat: add product comparison entry points"
 - Consumes: `getProductComparison(ids)`、`useCompareStore()` 与 Task 1 的批量响应。
 - Produces: 公开 `/compare` 页面、规范化 URL、参数行和“仅看差异”。
 
-- [ ] **Step 1: 编写分享恢复和过期请求失败测试**
+- [x] **Step 1: 编写分享恢复和过期请求失败测试**
 
 mock `route.query.ids = '2,bad,2,3,9,10,11'`，mock 批量接口返回商品 2、3 与失效 ID 9、10。断言只请求前四个去重合法 ID、最终 URL 和 store 只保留真实商品：
 
@@ -647,7 +647,7 @@ expect(wrapper.text()).toContain('部分商品已失效，已从对比中移除'
 
 再用两个 deferred Promise 验证旧组合晚返回时不能覆盖新组合。
 
-- [ ] **Step 2: 编写参数并集与仅看差异失败测试**
+- [x] **Step 2: 编写参数并集与仅看差异失败测试**
 
 使用两件商品字面量：共有“续航=40 小时”，不同“重量”和只有一方拥有“降噪”。默认断言三行都显示；点击“仅看差异”后共有续航行隐藏，缺失值显示“未提供”。
 
@@ -658,13 +658,13 @@ expect(wrapper.find('[data-parameter="续航"]').exists()).toBe(false)
 expect(wrapper.get('[data-parameter="降噪"]').text()).toContain('未提供')
 ```
 
-- [ ] **Step 3: 运行页面测试并确认路由/页面缺失**
+- [x] **Step 3: 运行页面测试并确认路由/页面缺失**
 
 Run: `pnpm exec vitest run src/views/store/ProductComparisonView.test.ts`（工作目录 `frontend`）
 
 Expected: FAIL，页面模块或对比行为不存在。
 
-- [ ] **Step 4: 实现 ID 规范化、请求时序和基础派生行**
+- [x] **Step 4: 实现 ID 规范化、请求时序和基础派生行**
 
 页面只保留服务端数据与 UI 状态；参数行使用纯 `computed`：
 
@@ -716,7 +716,7 @@ const visibleRows = computed(() => {
 
 请求使用递增 `requestSequence`；只有最后一次请求能写 `products`、store 和 URL。少于两件不请求 API，显示返回商品列表的入口。固定事实行必须包含品牌、价格区间、评分、评价数、销量和总可售库存，随后拼接 `parameterRows` 与 `skuAttributeRows`。`visibleRows` 对两组规格行统一执行仅看差异过滤。
 
-- [ ] **Step 5: 实现响应式对比表和公开路由**
+- [x] **Step 5: 实现响应式对比表和公开路由**
 
 在 router 商城 children 中添加：
 
@@ -743,7 +743,7 @@ async function removeProduct(productId: number) {
 }
 ```
 
-- [ ] **Step 6: 运行目标测试、回归和构建**
+- [x] **Step 6: 运行目标测试、回归和构建**
 
 Run: `pnpm exec vitest run src/views/store/ProductComparisonView.test.ts src/stores/compare.test.ts src/components/ProductCard.test.ts`（工作目录 `frontend`）
 
@@ -753,7 +753,7 @@ Run: `pnpm build`（工作目录 `frontend`）
 
 Expected: exit 0；允许已有包体积与演示图片运行时解析警告，不允许类型错误。
 
-- [ ] **Step 7: 提交基础对比页**
+- [x] **Step 7: 提交基础对比页**
 
 ```powershell
 git add frontend/src/views/store/ProductComparisonView.vue frontend/src/views/store/ProductComparisonView.test.ts frontend/src/router/index.ts docs/superpowers/plans/2026-08-24-product-comparison.md
