@@ -190,6 +190,40 @@ class ShoppingGuideRequest(BaseModel):
     conversation_id: int | None = Field(default=None, ge=1)
 
 
+class ProductComparisonRequest(BaseModel):
+    product_ids: list[int] = Field(min_length=2, max_length=16)
+    preference: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def unique_products(self) -> Self:
+        self.product_ids = list(dict.fromkeys(self.product_ids))
+        if len(self.product_ids) < 2:
+            raise ValueError("至少需要两件不同商品")
+        if len(self.product_ids) > 4:
+            raise ValueError("最多只能对比四件商品")
+        if self.preference is not None:
+            self.preference = self.preference.strip() or None
+        return self
+
+
+class ProductComparisonAiItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    product_id: int
+    strengths: list[str] = Field(max_length=5)
+    weaknesses: list[str] = Field(max_length=5)
+    suitable_for: list[str] = Field(max_length=5)
+
+
+class ProductComparisonAiResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    recommended_product_id: int
+    summary: str = Field(min_length=1, max_length=1000)
+    items: list[ProductComparisonAiItem]
+    considerations: list[str] = Field(max_length=8)
+
+
 class RecommendationItemPublic(BaseModel):
     product_id: int
     sku_id: int | None

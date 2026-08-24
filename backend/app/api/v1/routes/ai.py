@@ -19,12 +19,15 @@ from backend.app.schemas.ai import (
     ConversationDetail,
     ConversationMessagePublic,
     ConversationPublic,
+    ProductComparisonAiResult,
+    ProductComparisonRequest,
     ProductQuestionRequest,
     ProductQuestionResponse,
     ShoppingGuideRequest,
 )
 from backend.app.schemas.common import PageData
 from backend.app.services.knowledge import KnowledgeService
+from backend.app.services.product_comparison_ai import ProductComparisonAiService
 from backend.app.services.product_price_stock import ProductPriceStockService
 from backend.app.services.shopping_agent import ShoppingAgentService
 
@@ -40,6 +43,21 @@ async def shopping_guide(
     return ApiResponse(
         message="导购任务执行完成",
         data=await ShoppingAgentService(session).run(user.id, payload),
+    )
+
+
+@router.post(
+    "/product-comparison",
+    response_model=ApiResponse[ProductComparisonAiResult],
+)
+async def compare_products_with_ai(
+    payload: ProductComparisonRequest,
+    session: DbSession,
+    user: CurrentUser,
+) -> ApiResponse[ProductComparisonAiResult]:
+    return ApiResponse(
+        message="AI 对比分析完成",
+        data=await ProductComparisonAiService(session).compare(payload),
     )
 
 
@@ -70,9 +88,7 @@ async def product_question(
 ) -> ApiResponse[ProductQuestionResponse]:
     repository = AiRepository(session)
     if payload.conversation_id is not None:
-        conversation = await repository.get_conversation(
-            payload.conversation_id, user_id=user.id
-        )
+        conversation = await repository.get_conversation(payload.conversation_id, user_id=user.id)
         if conversation is None or conversation.scene != "PRODUCT_QA":
             raise NotFoundError("问答会话不存在")
     else:
@@ -103,10 +119,7 @@ async def product_question(
         for item in price_stock.skus:
             line = f"{item.sku_name}：¥{item.price}，可售库存 {item.available_stock} 件"
             if item.promotion is not None:
-                line += (
-                    f"，优惠 {item.promotion.name}，"
-                    f"预计优惠 ¥{item.promotion.discount_amount}"
-                )
+                line += f"，优惠 {item.promotion.name}，预计优惠 ¥{item.promotion.discount_amount}"
             lines.append(line)
         result = ProductQuestionResponse(
             answer="；".join(lines) or "当前没有可售规格。",
@@ -141,7 +154,8 @@ async def product_question(
         )
         normalized = payload.question.lower()
         matched = [
-            rule for rule in rules
+            rule
+            for rule in rules
             if not rule.keywords or any(word.lower() in normalized for word in rule.keywords)
         ]
         result = ProductQuestionResponse(

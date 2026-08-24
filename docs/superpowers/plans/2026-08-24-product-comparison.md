@@ -776,7 +776,7 @@ git commit -m "feat: add shareable product comparison page"
 - Produces: `ProductComparisonAiService.compare(payload) -> ProductComparisonAiResult`。
 - Produces: 登录接口 `POST /api/v1/ai/product-comparison`。
 
-- [ ] **Step 1: 编写结构化服务失败测试**
+- [x] **Step 1: 编写结构化服务失败测试**
 
 使用 `FakeComparisonGateway` 捕获 facts 和调用次数：
 
@@ -809,7 +809,7 @@ async def test_ai_comparison_uses_server_facts_once() -> None:
 
 增加候选外 `recommended_product_id=999`、下架候选、跨分类和重复后不足两件的测试。
 
-- [ ] **Step 2: 编写超时和非思考请求失败测试**
+- [x] **Step 2: 编写超时和非思考请求失败测试**
 
 给 service 注入 `timeout_seconds=0.01` 和一个永不及时返回的 gateway，断言 `AI_COMPARISON_TIMEOUT`、504。给百炼 gateway 注入 fake OpenAI client，断言一次调用参数：
 
@@ -822,13 +822,13 @@ assert kwargs["max_tokens"] <= 800
 assert kwargs["temperature"] == 0.2
 ```
 
-- [ ] **Step 3: 运行测试并确认 AI 服务缺失**
+- [x] **Step 3: 运行测试并确认 AI 服务缺失**
 
 Run: `uv run pytest tests/test_product_comparison_ai.py -q`
 
 Expected: FAIL，提示 `product_comparison_ai` 或 AI DTO 不存在。
 
-- [ ] **Step 4: 添加请求和响应 DTO**
+- [x] **Step 4: 添加请求和响应 DTO**
 
 在 `backend/app/schemas/ai.py` 添加：
 
@@ -863,7 +863,7 @@ class ProductComparisonAiResult(BaseModel):
     considerations: list[str] = Field(max_length=8)
 ```
 
-- [ ] **Step 5: 实现 gateway 和领域服务**
+- [x] **Step 5: 实现 gateway 和领域服务**
 
 `ProductComparisonGateway` Protocol 只暴露 `compare(facts, preference)` 与 `close()`。`BailianProductComparisonGateway` 使用默认配置解密后的 key，通过一次 `chat.completions.create()` 返回 JSON 并执行 `ProductComparisonAiResult.model_validate_json(content)`。
 
@@ -879,7 +879,7 @@ raise AppError(
 
 无默认启用配置或密钥时返回 `AI_MODEL_UNAVAILABLE`、503。非法模型 JSON 返回 `AI_INVALID_RESPONSE`、502。响应 DTO 不定义价格或库存字段。
 
-- [ ] **Step 6: 注册登录保护路由**
+- [x] **Step 6: 注册登录保护路由**
 
 ```python
 @router.post(
@@ -899,7 +899,7 @@ async def compare_products_with_ai(
 
 `user` 必须保留为依赖，即使领域服务不读取 user ID，确保 FastAPI 在创建模型调用前完成登录校验。
 
-- [ ] **Step 7: 运行 AI 测试和后端检查**
+- [x] **Step 7: 运行 AI 测试和后端检查**
 
 Run: `uv run pytest tests/test_product_comparison.py tests/test_product_comparison_ai.py -q`
 
@@ -913,7 +913,7 @@ Run: `uv run mypy backend/app/services/product_comparison_ai.py backend/app/api/
 
 Expected: exit 0。
 
-- [ ] **Step 8: 提交快速 AI 后端**
+- [x] **Step 8: 提交快速 AI 后端**
 
 ```powershell
 git add backend/app/schemas/ai.py backend/app/services/product_comparison_ai.py backend/app/api/v1/routes/ai.py tests/test_product_comparison_ai.py docs/superpowers/plans/2026-08-24-product-comparison.md
