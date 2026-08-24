@@ -308,4 +308,47 @@ describe('ProductComparisonView', () => {
 
     expect(wrapper.text()).toContain('商家暂未提供详细参数')
   })
+
+  it('keeps the no-parameters explanation visible while only showing differences', async () => {
+    const first = product(2)
+    const second = product(3)
+    first.skus = []
+    second.skus = []
+    mocks.getProductComparison.mockResolvedValue(comparison([first, second]))
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.get('[aria-label="仅看差异"]').setValue(true)
+
+    expect(wrapper.text()).toContain('商家暂未提供详细参数')
+  })
+
+  it('clears stale facts when an external single-ID URL does not match loaded products', async () => {
+    mocks.getProductComparison.mockResolvedValue(comparison([product(2), product(3)]))
+    const wrapper = mountView()
+    await flushPromises()
+
+    route.query = { ids: '4' }
+    await flushPromises()
+
+    expect(mocks.getProductComparison).toHaveBeenCalledTimes(1)
+    expect(useCompareStore().ids).toEqual([])
+    expect(wrapper.text()).not.toContain('商品 2')
+    expect(wrapper.text()).not.toContain('商品 3')
+    expect(wrapper.text()).toContain('请选择至少两件同分类商品')
+  })
+
+  it('keeps only the matching loaded product after an external single-ID URL change', async () => {
+    mocks.getProductComparison.mockResolvedValue(comparison([product(2), product(3)]))
+    const wrapper = mountView()
+    await flushPromises()
+
+    route.query = { ids: '2' }
+    await flushPromises()
+
+    expect(mocks.getProductComparison).toHaveBeenCalledTimes(1)
+    expect(useCompareStore().ids).toEqual([2])
+    expect(wrapper.text()).toContain('商品 2')
+    expect(wrapper.text()).not.toContain('商品 3')
+  })
 })

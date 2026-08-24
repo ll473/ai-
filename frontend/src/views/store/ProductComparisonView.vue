@@ -128,10 +128,9 @@ async function loadComparison(value: unknown) {
   unavailableIds.value = []
 
   if (requestedIds.length < 2) {
-    if (!requestedIds.length) {
-      products.value = []
-      compare.clear()
-    }
+    const retainedProducts = products.value.filter(product => requestedIds.includes(product.id))
+    products.value = retainedProducts
+    compare.replaceFromProducts(retainedProducts)
     loading.value = false
     return
   }
@@ -225,7 +224,7 @@ watch(() => route.query.ids, value => void loadComparison(value), { immediate: t
             <th class="comparison-table__label" scope="row">{{ row.label }}</th>
             <td v-for="(value, index) in row.values" :key="products[index]?.id" :class="{ 'price-value': row.key === 'price' }">{{ value }}</td>
           </tr>
-          <tr v-if="!hasDetailedParameters && !differencesOnly" data-parameter-notice>
+          <tr v-if="!hasDetailedParameters" data-parameter-notice>
             <th class="comparison-table__label" scope="row">详细参数</th>
             <td :colspan="products.length">商家暂未提供详细参数</td>
           </tr>

@@ -174,7 +174,14 @@ export function getDemoProductComparison(productIds: number[]): ProductCompariso
   const categoriesById = new Map(demoCategories.map(category => [category.id, category]))
   const brandsById = new Map(demoBrands.map(brand => [brand.id, brand]))
   const items = selectedProducts.map<ProductComparisonItem>((product) => {
-    const skus = product.skus.filter(sku => sku.enabled)
+    const skus = product.skus
+      .filter(sku => sku.enabled)
+      .map(sku => ({
+        name: sku.name,
+        attributes: sku.attributes,
+        price: sku.price,
+        available_stock: sku.available_stock,
+      }))
     return {
       ...toSummary(product),
       category_name: categoriesById.get(product.category_id)?.name || '',
