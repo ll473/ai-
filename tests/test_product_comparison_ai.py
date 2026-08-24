@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
@@ -326,6 +327,61 @@ async def test_bailian_gateway_uses_one_non_thinking_json_request() -> None:
     assert kwargs["response_format"] == {"type": "json_object"}
     assert kwargs["max_tokens"] <= 800
     assert kwargs["temperature"] == 0.2
+
+
+@pytest.mark.asyncio
+async def test_bailian_gateway_normalizes_single_suitable_for_string() -> None:
+    class FakeClient:
+        def __init__(self) -> None:
+            self.chat = SimpleNamespace(
+                completions=SimpleNamespace(create=self.create),
+            )
+
+        async def create(self, **_: Any) -> Any:
+            content = json.dumps(
+                {
+                    "recommended_product_id": 2,
+                    "summary": "更推荐商品 2。",
+                    "items": [
+                        {
+                            "product_id": 1,
+                            "strengths": ["价格更低"],
+                            "weaknesses": ["续航较短"],
+                            "suitable_for": "预算优先用户",
+                        },
+                        {
+                            "product_id": 2,
+                            "strengths": ["续航更长"],
+                            "weaknesses": ["价格较高"],
+                            "suitable_for": "通勤用户",
+                        },
+                    ],
+                    "considerations": ["结合实际场景选择"],
+                },
+                ensure_ascii=False,
+            )
+            return SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content=content))]
+            )
+
+        async def close(self) -> None:
+            pass
+
+    gateway = BailianProductComparisonGateway(
+        model="qwen3.7-plus",
+        api_key="test-key",
+        client=FakeClient(),
+    )
+
+    result = await gateway.compare(
+        [{"product_id": 1}, {"product_id": 2}],
+        None,
+    )
+
+    assert [item.suitable_for for item in result.items] == [
+        ["预算优先用户"],
+        ["通勤用户"],
+    ]
 
 
 @pytest.mark.asyncio

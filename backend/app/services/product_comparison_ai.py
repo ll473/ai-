@@ -50,7 +50,8 @@ class BailianProductComparisonGateway:
                             "不得编造价格、库存、促销或未提供的参数。"
                             "必须只输出 JSON 对象，字段为 recommended_product_id、summary、"
                             "items、considerations；items 每项仅包含 product_id、strengths、"
-                            "weaknesses、suitable_for。"
+                            "weaknesses、suitable_for。strengths、weaknesses、suitable_for "
+                            "必须都是 JSON 字符串数组，即使只有一项也必须使用数组。"
                         ),
                     },
                     {

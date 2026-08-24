@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Any, Literal, Self
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from backend.app.core.config import get_settings
 from backend.app.models.enums import (
@@ -213,6 +213,11 @@ class ProductComparisonAiItem(BaseModel):
     strengths: list[str] = Field(max_length=5)
     weaknesses: list[str] = Field(max_length=5)
     suitable_for: list[str] = Field(max_length=5)
+
+    @field_validator("suitable_for", mode="before")
+    @classmethod
+    def normalize_single_suitable_for(cls, value: object) -> object:
+        return [value] if isinstance(value, str) else value
 
 
 class ProductComparisonAiResult(BaseModel):
