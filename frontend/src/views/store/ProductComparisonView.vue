@@ -23,6 +23,7 @@ const loadError = shallowRef('')
 const unavailableIds = shallowRef<number[]>([])
 const differencesOnly = shallowRef(false)
 let requestSequence = 0
+let internalCanonicalIds: string | null = null
 
 function normalizeProductIds(value: unknown): number[] {
   const parts = Array.isArray(value) ? value : [value]
@@ -86,13 +87,16 @@ const visibleRows = computed(() => {
 
 const hasEnoughProducts = computed(() => products.value.length >= 2)
 
-function currentIdsText() {
-  return normalizeProductIds(route.query.ids).join(',')
+function isCanonicalRouteValue(value: unknown, ids: number[]) {
+  const canonicalIds = ids.join(',')
+  if (!canonicalIds) return value === undefined
+  return typeof value === 'string' && value === canonicalIds
 }
 
 async function replaceWithResolvedIds(ids: number[]) {
+  if (isCanonicalRouteValue(route.query.ids, ids)) return
   const resolvedIds = ids.join(',')
-  if (currentIdsText() === resolvedIds) return
+  internalCanonicalIds = resolvedIds
   await router.replace({
     path: '/compare',
     query: resolvedIds ? { ids: resolvedIds } : {},
@@ -102,12 +106,17 @@ async function replaceWithResolvedIds(ids: number[]) {
 async function loadComparison(value: unknown) {
   const requestedIds = normalizeProductIds(value)
   const sequence = ++requestSequence
+  const requestedIdsText = requestedIds.join(',')
+  const isInternalCanonicalReload = internalCanonicalIds === requestedIdsText
+    && isCanonicalRouteValue(value, requestedIds)
+  if (isInternalCanonicalReload) internalCanonicalIds = null
   loadError.value = ''
-  unavailableIds.value = []
+  if (!isInternalCanonicalReload) unavailableIds.value = []
 
   if (requestedIds.length < 2) {
     products.value = []
     compare.clear()
+    loading.value = false
     await replaceWithResolvedIds(requestedIds)
     return
   }
@@ -117,17 +126,22 @@ async function loadComparison(value: unknown) {
     const result = await getProductComparison(requestedIds)
     if (sequence !== requestSequence) return
     products.value = result.items
-    unavailableIds.value = result.unavailable_ids
+    unavailableIds.value = isInternalCanonicalReload
+      ? [...new Set([...unavailableIds.value, ...result.unavailable_ids])]
+      : result.unavailable_ids
     compare.replaceFromProducts(result.items)
     await replaceWithResolvedIds(result.items.map(product => product.id))
   } catch (cause) {
     if (sequence !== requestSequence) return
     products.value = []
-    compare.clear()
     loadError.value = cause instanceof Error ? cause.message : '商品对比加载失败，请稍后重试'
   } finally {
     if (sequence === requestSequence) loading.value = false
   }
+}
+
+function retryComparison() {
+  void loadComparison(route.query.ids)
 }
 
 async function removeProduct(productId: number) {
@@ -163,7 +177,8 @@ watch(() => route.query.ids, value => void loadComparison(value), { immediate: t
 
     <section v-if="loading" class="comparison-state" aria-live="polite">正在加载对比商品…</section>
     <section v-else-if="loadError" class="comparison-state comparison-state--error" role="alert">
-      {{ loadError }}
+      <p>{{ loadError }}</p>
+      <button type="button" aria-label="重新加载商品对比" @click="retryComparison">重新加载</button>
     </section>
     <section v-else-if="!hasEnoughProducts" class="comparison-state">
       <h2>请选择至少两件同分类商品</h2>
@@ -311,6 +326,21 @@ watch(() => route.query.ids, value => void loadComparison(value), { immediate: t
   border-color: #efb5b5;
   background: #fff7f7;
   color: var(--color-danger);
+}
+
+.comparison-state--error p {
+  margin: 0 0 16px;
+}
+
+.comparison-state--error button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-danger);
+  cursor: pointer;
+  font-weight: 650;
 }
 
 .browse-link,

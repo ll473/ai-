@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { createPinia, setActivePinia } from 'pinia'
+import { createPinia, setActivePinia, type Pinia } from 'pinia'
 import { reactive } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 
 const route = reactive({ query: { ids: '2,3' } as Record<string, unknown> })
 const mountedWrappers: ReturnType<typeof mount>[] = []
+let pinia: Pinia
 
 vi.mock('../../api/catalog', () => ({
   getProductComparison: mocks.getProductComparison,
@@ -79,7 +80,7 @@ function deferred<T>() {
 function mountView() {
   const wrapper = mount(ProductComparisonView, {
     global: {
-      plugins: [createPinia()],
+      plugins: [pinia],
       stubs: {
         RouterLink: { template: '<a><slot /></a>' },
       },
@@ -92,10 +93,14 @@ function mountView() {
 describe('ProductComparisonView', () => {
   beforeEach(() => {
     localStorage.clear()
-    setActivePinia(createPinia())
+    pinia = createPinia()
+    setActivePinia(pinia)
     route.query = { ids: '2,3' }
     mocks.getProductComparison.mockReset()
     mocks.replace.mockReset()
+    mocks.replace.mockImplementation(async (location: { query?: Record<string, unknown> }) => {
+      route.query = location.query || {}
+    })
   })
 
   afterEach(() => {
@@ -155,5 +160,72 @@ describe('ProductComparisonView', () => {
     expect(wrapper.find('[data-parameter="续航"]').exists()).toBe(false)
     expect(wrapper.get('[data-parameter="重量"]').text()).toContain('250 g')
     expect(wrapper.get('[data-parameter="降噪"]').text()).toContain('未提供')
+  })
+
+  it('rewrites trailing invalid IDs in a shared link to its canonical form', async () => {
+    route.query = { ids: '2,3,bad' }
+    mocks.getProductComparison.mockResolvedValue(comparison([product(2), product(3)]))
+
+    mountView()
+    await flushPromises()
+
+    expect(route.query).toEqual({ ids: '2,3' })
+    expect(mocks.replace).toHaveBeenCalledWith({ path: '/compare', query: { ids: '2,3' } })
+  })
+
+  it('rewrites repeated query parameters to one canonical shared IDs parameter', async () => {
+    route.query = { ids: ['2', '3'] }
+    mocks.getProductComparison.mockResolvedValue(comparison([product(2), product(3)]))
+
+    mountView()
+    await flushPromises()
+
+    expect(route.query).toEqual({ ids: '2,3' })
+    expect(mocks.replace).toHaveBeenCalledWith({ path: '/compare', query: { ids: '2,3' } })
+  })
+
+  it('keeps the unavailable product notice after an internal URL rewrite reloads the route', async () => {
+    route.query = { ids: '2,3,9' }
+    mocks.getProductComparison
+      .mockResolvedValueOnce(comparison([product(2), product(3)], [9]))
+      .mockResolvedValueOnce(comparison([product(2), product(3)]))
+
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(route.query).toEqual({ ids: '2,3' })
+    expect(wrapper.text()).toContain('部分商品已失效，已从对比中移除')
+  })
+
+  it('leaves the loading state when a late request is superseded by fewer than two products', async () => {
+    const pending = deferred<ProductComparisonResult>()
+    mocks.getProductComparison.mockReturnValue(pending.promise)
+
+    const wrapper = mountView()
+    route.query = { ids: '2' }
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('请选择至少两件同分类商品')
+    expect(wrapper.text()).not.toContain('正在加载对比商品')
+
+    pending.resolve(comparison([product(2), product(3)]))
+    await flushPromises()
+  })
+
+  it('keeps saved selections on a comparison request error and offers a retry', async () => {
+    const compare = useCompareStore()
+    compare.replaceFromProducts([product(2), product(3)])
+    mocks.getProductComparison
+      .mockRejectedValueOnce(new Error('网络暂时不可用'))
+      .mockResolvedValueOnce(comparison([product(2), product(3)]))
+
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(compare.ids).toEqual([2, 3])
+    await wrapper.get('button[aria-label="重新加载商品对比"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('商品 2')
   })
 })
