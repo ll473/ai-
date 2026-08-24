@@ -84,4 +84,15 @@ describe('ProductCompareTray', () => {
     await wrapper.vm.$nextTick()
     expect(wrapper.find('[data-testid="product-compare-tray"]').exists()).toBe(false)
   })
+
+  it('keeps a dedicated small-screen clear action available and functional', async () => {
+    const compare = useCompareStore()
+    compare.add(product(1))
+    compare.add(product(2))
+    const wrapper = mountTray()
+
+    await wrapper.get('button.product-compare-tray__clear--mobile').trigger('click')
+
+    expect(compare.ids).toEqual([])
+  })
 })

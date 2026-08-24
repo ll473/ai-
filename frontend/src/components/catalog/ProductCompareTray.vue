@@ -34,7 +34,22 @@ function openComparison() {
       </div>
 
       <div class="product-compare-tray__actions">
-        <button type="button" aria-label="清空商品对比" class="clear-button" @click="compare.clear">清空</button>
+        <button
+          type="button"
+          aria-label="清空商品对比"
+          class="clear-button product-compare-tray__clear--desktop"
+          @click="compare.clear"
+        >
+          清空
+        </button>
+        <button
+          type="button"
+          aria-label="清空商品对比"
+          class="clear-button product-compare-tray__clear--mobile"
+          @click="compare.clear"
+        >
+          清空
+        </button>
         <button
           type="button"
           aria-label="开始商品对比"
@@ -145,6 +160,10 @@ function openComparison() {
   gap: 10px;
 }
 
+.product-compare-tray__clear--mobile {
+  display: none;
+}
+
 .start-button {
   min-height: 36px;
   padding: 0 15px;
@@ -184,8 +203,12 @@ function openComparison() {
     min-width: 130px;
   }
 
-  .clear-button {
+  .product-compare-tray__clear--desktop {
     display: none;
+  }
+
+  .product-compare-tray__clear--mobile {
+    display: inline-block;
   }
 }
 </style>
