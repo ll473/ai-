@@ -221,6 +221,36 @@ async def test_ai_comparison_rejects_item_ids_outside_server_candidates() -> Non
 
 
 @pytest.mark.asyncio
+async def test_ai_comparison_rejects_response_missing_a_candidate_item() -> None:
+    incomplete_result = ai_result()
+    incomplete_result.items.pop()
+    async with seeded_session() as session:
+        gateway = FakeComparisonGateway(incomplete_result)
+        with pytest.raises(Exception) as captured:
+            await ProductComparisonAiService(session, gateway=gateway).compare(
+                ProductComparisonRequest(product_ids=[1, 2])
+            )
+
+    assert captured.value.code == "AI_INVALID_RESPONSE"
+    assert captured.value.status_code == 502
+
+
+@pytest.mark.asyncio
+async def test_ai_comparison_rejects_response_with_no_candidate_items() -> None:
+    empty_result = ai_result()
+    empty_result.items = []
+    async with seeded_session() as session:
+        gateway = FakeComparisonGateway(empty_result)
+        with pytest.raises(Exception) as captured:
+            await ProductComparisonAiService(session, gateway=gateway).compare(
+                ProductComparisonRequest(product_ids=[1, 2])
+            )
+
+    assert captured.value.code == "AI_INVALID_RESPONSE"
+    assert captured.value.status_code == 502
+
+
+@pytest.mark.asyncio
 async def test_ai_comparison_maps_gateway_timeout_to_504() -> None:
     async with seeded_session() as session:
         gateway = SlowComparisonGateway(ai_result())

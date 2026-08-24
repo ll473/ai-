@@ -183,6 +183,7 @@ class ProductComparisonAiService:
             result.recommended_product_id not in candidate_ids
             or any(item_id not in candidate_ids for item_id in item_ids)
             or len(item_ids) != len(set(item_ids))
+            or set(item_ids) != candidate_ids
         ):
             raise AppError(
                 "AI 对比分析结果包含无效商品",
