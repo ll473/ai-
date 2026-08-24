@@ -1134,7 +1134,7 @@ git add README.md docs/superpowers/plans/2026-08-24-product-comparison.md
 git commit -m "docs: document product comparison center"
 ```
 
-- [ ] **Step 7: 推送并核对远端**
+- [x] **Step 7: 推送并核对远端**
 
 ```powershell
 git push origin main
